@@ -1,0 +1,16 @@
+# machine-specific paths -- see .env.example for the template
+.env
+.env.*
+!.env.example
+
+__pycache__/
+*.pyc
+
+# generated audio and metrics live outside this repo (RESULTS_ROOT), but
+# ignore them here too in case a script is ever pointed at a local folder
+/out/
+*.jpg
+*.jpeg
+*.mp3
+*.mp4
+*.wav

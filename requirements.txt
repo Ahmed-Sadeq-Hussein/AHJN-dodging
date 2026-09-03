@@ -1,0 +1,93 @@
+# Dependencies for detectors.py / score_all.py  (env: "voicefake")
+# ================================================================
+# The cloning half lives in a SEPARATE env -- see requirements-voiceclone.txt.
+# They cannot share one: torch 2.6/numpy 2.2 here vs torch 2.3.1/numpy 1.26
+# there. The two halves communicate through .wav files on disk.
+# Installed and verified 2026-09-02 in conda env "voicefake" (E:\envs\voicefake,
+# ~5.1 GB). Note that this machine's conda writes envs to E:\envs, not C:.
+#
+# Recreate with:
+#
+#     conda create -n voicefake -y python=3.10
+#     conda activate voicefake
+#     pip install -r requirements.txt
+#
+# Python 3.10 is deliberate: the repos target 3.6-3.8, and torch has no
+# build for the 3.14 in your conda base. 3.10 is the newest version that
+# keeps both happy.
+#
+# ---------------------------------------------------------------------------
+# WHY THESE VERSIONS AND NOT THE REPOS' OWN requirements.txt
+# ---------------------------------------------------------------------------
+# The three upstream requirement files cannot be satisfied together:
+#
+#   aasist            torch>=1.6.0, torchcontrib, numpy, soundfile
+#   RawGAT-ST         numpy==1.19.2, librosa==0.8.0, pyyaml==5.4.1, joblib==1.0.1
+#   Baseline-RawNet2  numpy==1.17.0, librosa==0.7.2, pyyaml==5.3.1, numba==0.48
+#
+# numpy, librosa and pyyaml are pinned to different versions by the last two,
+# and none of those pins build on modern Python (pyyaml 5.x fails against
+# Cython 3; numba 0.48 has no 3.10 wheel).
+#
+# So this list covers what the model code actually *imports* at inference
+# time, which is a much smaller set than the training scripts need:
+#
+#   AASIST.py    -> torch, numpy
+#   RawNet2      -> torch, numpy            (+ pyyaml for its config)
+#   RawGAT-ST    -> torch, numpy, scipy.io  (+ pyyaml for its config)
+#   detectors.py -> soundfile / librosa / soxr for audio I/O and resampling
+#
+# Deliberately omitted, needed only for TRAINING with the repos' own main.py:
+#   torchcontrib (SWA optimizer), tensorboardX, tensorboard
+# Add them if you start fine-tuning rather than just running inference.
+#
+# Checked: none of the three model files use the numpy aliases removed in
+# numpy 2.x (np.float / np.int / np.bool), so numpy 2.2 is safe here.
+
+# --- torch: CUDA 12.4 build for the RTX 3080 ------------------------------
+# The default PyPI torch is CPU-only on Windows, so this index is required.
+# For a CPU-only box, drop the line below and use plain "torch==2.6.0".
+--extra-index-url https://download.pytorch.org/whl/cu124
+torch==2.6.0+cu124
+torchaudio==2.6.0+cu124
+
+# --- direct dependencies of detectors.py ----------------------------------
+numpy==2.2.6
+scipy==1.15.3          # RawGAT-ST's model.py imports scipy.io
+PyYAML==6.0.3          # RawNet2 + RawGAT-ST model configs
+soundfile==0.14.0      # primary audio reader (wav, flac, ogg)
+librosa==0.11.0        # fallback reader for mp3/m4a, and resampling
+soxr==1.1.0            # fast, high-quality resampler (preferred path)
+
+# ---------------------------------------------------------------------------
+# Full resolved environment (36 packages) -- the above pull these in.
+# Uncomment the block to pin the environment exactly.
+# ---------------------------------------------------------------------------
+# Jinja2==3.1.6
+# MarkupSafe==3.0.3
+# audioread==3.1.0
+# certifi==2026.7.22
+# cffi==2.1.1
+# charset-normalizer==3.5.1
+# cloudpickle==3.1.2
+# decorator==5.3.1
+# filelock==3.32.3
+# fsspec==2026.7.0
+# idna==3.19
+# joblib==1.6.0
+# lazy-loader==0.5
+# llvmlite==0.49.0
+# mpmath==1.3.0
+# msgpack==1.2.2
+# networkx==3.4.2
+# numba==0.67.0
+# packaging==26.3
+# platformdirs==4.11.7
+# pooch==1.9.0
+# pycparser==3.0
+# requests==2.34.2
+# scikit-learn==1.7.2
+# sympy==1.13.1
+# threadpoolctl==3.6.0
+# typing_extensions==4.16.0
+# urllib3==2.7.0

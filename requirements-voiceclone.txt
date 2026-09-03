@@ -1,0 +1,127 @@
+# Dependencies for cloners.py / generate_all.py / Tester.py
+# ==========================================================
+# Installed and verified 2026-09-02 in conda env "voiceclone"
+# (E:\envs\voiceclone, ~6.7 GB, 175 packages). Note this machine's conda
+# writes envs to E:\envs, not C:.
+#
+#     conda create -n voiceclone -y python=3.10
+#     conda activate voiceclone
+#     pip install -c constraints.txt -r requirements-voiceclone.txt
+#
+# THIS IS A SEPARATE ENV FROM "voicefake" (see requirements.txt) AND MUST
+# STAY THAT WAY. The two stacks pin incompatible versions:
+#
+#                voicefake (detectors)   voiceclone (cloners)
+#   torch        2.6.0+cu124             2.3.1+cu121
+#   numpy        2.2.6                   1.26.4   (torch 2.3 predates numpy 2)
+#
+# The two halves talk through .wav files on disk, not in memory:
+#   generate_all.py  (voiceclone) -> D:\results and benchmarks\generators\
+#   score_all.py     (voicefake)  -> D:\results and benchmarks\discriminator\
+#
+# ---------------------------------------------------------------------------
+# FOUR TRAPS, all hit during setup. Install with the constraints file.
+# ---------------------------------------------------------------------------
+# 1. `lightning` and `x-transformers` declare a bare `torch` dependency and
+#    will happily REPLACE torch 2.3.1+cu121 with the latest CPU-only wheel
+#    from PyPI, silently killing CUDA. Always install with
+#    `-c constraints.txt` (below) and re-check torch.cuda.is_available()
+#    after any pip install into this env.
+#
+# 2. `lightning` IS required, despite not looking like it. CosyVoice2's
+#    flow_matching imports matcha.utils.pylogger, which imports
+#    lightning.pytorch.utilities.rank_zero_only -- for a logging decorator.
+#    Installed with --no-deps here so it cannot touch torch.
+#
+# 3. setuptools >= 81 removed `pkg_resources`, which lightning-utilities
+#    still imports. Hence the setuptools pin.
+#
+# 4. `x-transformers` is NOT needed: it is only used by the DiT flow, and
+#    CosyVoice2's cosyvoice2.yaml uses CausalConditionalDecoder. Left out.
+#
+# Also required outside pip, downloaded on first use:
+#   - NLTK data for g2p_en (MeloTTS English):
+#       python -c "import nltk; [nltk.download(p) for p in
+#         ['averaged_perceptron_tagger_eng','cmudict','punkt','punkt_tab']]"
+#   - MeloTTS base-speaker checkpoints and BERT models (from HuggingFace)
+#   - whisper 'base' weights for Tester.py's WER (~139 MB)
+#   NO ffmpeg needed: Tester.py decodes with librosa and hands whisper an
+#   array, bypassing whisper's ffmpeg-based loader.
+
+# --- constraints.txt (write alongside this file) ---------------------------
+#   torch==2.3.1+cu121
+#   torchaudio==2.3.1+cu121
+#   numpy==1.26.4
+#   transformers==4.51.3
+#   setuptools<81
+
+# --- torch: CUDA 12.1 build, matching CosyVoice's own pin -----------------
+--extra-index-url https://download.pytorch.org/whl/cu121
+torch==2.3.1+cu121
+torchaudio==2.3.1+cu121
+numpy==1.26.4
+setuptools==80.10.2
+
+# --- CosyVoice2 inference -------------------------------------------------
+# (its requirements.txt lists 42 packages; gradio/fastapi/tensorboard/
+#  deepspeed/tensorrt are server or training paths and are omitted)
+HyperPyYAML==1.2.3
+conformer==0.3.2
+diffusers==0.39.0
+einops==0.8.2
+hydra-core==1.3.6
+inflect==7.5.0
+librosa==0.11.0
+matplotlib==3.10.9
+modelscope==1.39.1
+omegaconf==2.3.1
+onnxruntime==1.23.2
+openai-whisper==20250625
+pyarrow==25.0.1          # cosyvoice2.yaml resolves dataset.processor
+pyworld==0.3.5           # same
+rootutils==1.0.7
+scipy==1.15.3
+soundfile==0.14.0
+tiktoken==0.14.0
+tqdm==4.70.0
+transformers==4.51.3
+Unidecode==1.4.0
+wetext==0.1.7
+wget==3.2
+gdown==6.1.0
+rich==13.9.4
+
+# install these with --no-deps so they cannot pull a different torch:
+#   pip install --no-deps lightning==2.2.4 pytorch-lightning==2.2.4 \
+#       torchmetrics==1.3.2 lightning-utilities==0.11.2
+lightning==2.2.4
+pytorch-lightning==2.2.4
+torchmetrics==1.3.2
+lightning-utilities==0.11.2
+
+# --- OpenVoice V2 + MeloTTS ----------------------------------------------
+# MeloTTS pins transformers==4.27.4 upstream, which conflicts with
+# CosyVoice's 4.51.3. Verified working on 4.51.3, so the pin is ignored.
+# melo/text/cleaner.py imports EVERY language module eagerly, so the full
+# g2p stack is required even for English-only synthesis.
+wavmark==0.0.3           # ToneColorConverter imports it unconditionally
+cached_path==1.8.10
+txtsplit==1.0.0
+num2words==0.5.14
+g2p-en==2.1.0
+g2pkk==0.1.2
+jamo==0.4.1
+anyascii==0.3.3
+gruut[de,es,fr]==2.4.0
+unidic-lite==1.0.8
+mecab-python3==1.0.12
+fugashi==1.5.2
+pykakasi==2.3.0
+pypinyin==0.55.0
+cn2an==0.5.24
+jieba==0.42.1
+eng_to_ipa==0.0.2
+pydub==0.25.1
+langid==1.1.6
+loguru==0.7.3
+nltk==3.10.3
