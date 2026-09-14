@@ -99,7 +99,8 @@ what moved the detectors. Full reasoning, numbers and caveats are in
 ```
 
 On held-out voices with unseen sentences: mean detector score 0.34 -> 0.69
-(t = 12.26), soft-min 0.11 -> 0.37, similarity and WER unchanged. Strongest on
+(t = 12.26), soft-min 0.11 -> 0.37, similarity and WER unchanged, PESQ -0.22
+(at 4 passes PESQ is unchanged but the gain is half). Strongest on
 5-15 s utterances; the gain disappears on ~70 s clips.
 
 ### Reproducing it

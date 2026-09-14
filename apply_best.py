@@ -13,7 +13,8 @@ Best configuration (Plan_X/RESULTS.md sections 7 and 7h):
 
 On held-out voices with unseen sentences this took mean detector score
 0.34 -> 0.69 (t = 12.26) and soft-min 0.11 -> 0.37, with similarity and WER
-unchanged. It is strongest on ~5-15 s utterances; on ~70 s clips the gain
+unchanged but PESQ down 0.22. --iters 4 keeps PESQ intact for about half the
+gain. It is strongest on ~5-15 s utterances; on ~70 s clips the gain
 disappears (section 7e), and ten passes on a long clip can exhaust a 10 GB GPU.
 
 --no-edit renders the same seed without the edit, for an A/B comparison.

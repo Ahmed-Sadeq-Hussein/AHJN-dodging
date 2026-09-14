@@ -683,9 +683,16 @@ Confirmed end-to-end on held-out voices with unseen sentences (24 clips):
 | WER | 6.74% | 7.31% | 6.78% | **6.24%** | **-0.50pp** | -0.45 |
 
 Mean detector score more than doubles, and WER *improves*. This doubles the
-previous best (+0.126 at four passes) for no cost beyond six more forward
-passes, and it is the strongest result in the project by a wide margin
-(t = 12.26).
+previous best (+0.126 at four passes) and it is the strongest result in the
+project by a wide margin (t = 12.26).
+
+**Correction, added after 7k measured it:** ten passes is *not* free on
+perceptual quality. PESQ falls 3.258 -> 3.037 (**-0.22, t = -4.60**) and STOI
+-0.004, where four passes had cost nothing measurable. An earlier version of
+this section said the gain came "for no cost beyond six more forward passes";
+that was wrong -- similarity and WER were measured at ten passes, PESQ was
+not. The cost is about a third of PGD's own -0.64, so the pass count is a real
+evasion-versus-quality dial rather than a free setting.
 
 It is also the cleanest evidence yet for the step-operator reading in 7b: a
 memorised displacement could not keep improving through ten successive
@@ -724,36 +731,89 @@ is severe: evelynn's clone goes 0.129 -> 0.420 under denoising while jhin's
 goes 0.254 -> 0.107. Given that three prosody effects in this session halved
 under power, these should be treated as suggestive only.
 
-### 7j. Can the teacher go higher? Yes, but the cost is unmeasured
+### 7j. Can the teacher go higher? Yes -- but not usefully
 
-Since the operator now recovers 97% of PGD's gain, further progress has to
-come from a better teacher, not a better student. PGD's settings had never
-been tuned -- 60 steps / lr 0.05 / max_delta 0.6 were set once in the original
-feasibility probe and inherited by every dataset since.
+Since the operator recovers 97% of PGD's gain, further progress has to come
+from a better teacher. PGD's settings had never been tuned.
 
-**A first sweep was invalid and is recorded here as a warning.** Selecting
-examples alphabetically picked ten whose baseline soft-min was already 0.92;
-PGD saturates those at 1.0 under any setting, so the entire grid came out
-flat (0.9998-1.0000) and appeared to show the teacher was maxed out. The
-teacher's ceiling is only meaningful on clips the detectors actually catch.
+**A first sweep was invalid and is recorded as a warning.** Selecting examples
+alphabetically picked ten whose baseline soft-min was already 0.92; PGD
+saturates those at 1.0 under any setting, so the grid came out flat and
+appeared to show the teacher was maxed out.
 
-Re-run on the eight hardest examples (baseline soft-min 0.0130):
+On the eight hardest clips (baseline 0.013), 150 steps at lr 0.12 reached
+soft-min 0.2532 against the current teacher's 0.1698 -- 1.53x the gain, with
+an edit twice as large. `probe_teacher_quality.py` then measured what that
+costs on 6 hardest + 6 median clips:
 
-| steps | lr | soft-min | \|delta\| | s/example |
-|---|---|---|---|---|
-| 60 (current) | 0.05 | 0.1698 | 0.159 | 28 |
-| 60 | 0.12 | 0.1805 | 0.307 | 28 |
-| 150 | 0.05 | 0.1911 | 0.169 | 71 |
-| **150** | **0.12** | **0.2532** | **0.324** | 71 |
+| config | \|delta\| | soft-min | d sim | t | d PESQ | t | d STOI |
+|---|---|---|---|---|---|---|---|
+| current 60 / 0.05 | 0.155 | 0.3737 | +0.001 | 0.17 | -0.64 | -5.61 | -0.008 |
+| 150 / 0.05 | 0.164 | 0.4049 | -0.002 | -0.27 | -0.77 | -6.33 | -0.008 |
+| strong 150 / 0.12 | 0.320 | 0.4119 | **-0.080** | **-6.19** | **-1.87** | **-12.53** | -0.040 |
 
-The best configuration delivers **1.53x the teacher's gain on hard clips**,
-but doubles the edit magnitude. Whether that is usable depends on what the
-larger edit costs in similarity and PESQ -- and that measurement was still
-running when the session ended, so **the stronger teacher is currently an
-unexploited lead, not a result.** It should be the first thing checked next:
-if the doubled edit holds similarity, re-collecting targets at 150/0.12 is
-the clearest remaining path to raising the ceiling the student is now
-pressed against.
+**The strong teacher is rejected.** It buys +0.038 soft-min for 0.08
+similarity and almost two PESQ points -- the edit becomes audible damage.
+
+150 steps at lr 0.05 is nearly free (+0.031 soft-min, no similarity cost,
+-0.13 extra PESQ), but re-collecting the dataset at 2.5x the steps is roughly
+7.5 hours for a gain the student would only partly inherit. **Conclusion:
+further training on this formulation is not worth the compute.**
+
+This also exposes a quality cost that had been under-reported: the current
+PGD teacher itself costs **-0.64 PESQ (t = -5.61)**, consistent with the
+single-clip audit in section 6c. The distilled student was measured as free at
+4 passes (PESQ +0.04) but its PESQ at 10 passes has not yet been measured --
+see 7k.
+
+### 7k. Transfer to detectors that influenced nothing, and the real quality cost
+
+`probe_transfer.py` scores the ten-pass operator against detectors that played
+no part in the PGD targets, the gradient hint, or checkpoint selection. Six
+voices (four held out) x six unseen sentences, paired on a shared seed.
+
+The only unused detectors available locally are the two other fusion variants
+of RawGAT-ST (the attacked one is `mul`). They share the attacked model's
+architecture and training data but have separately trained weights, so this is
+a **near** transfer test -- success here is expected and does not by itself
+show the effect generalises beyond this model family.
+
+| detector | role | baseline | edited | gain | t | win rate |
+|---|---|---|---|---|---|---|
+| AASIST | attacked | 0.4203 | 0.8685 | +0.4481 | 7.58 | 97% |
+| AASIST-L | attacked | 0.4144 | 0.9194 | +0.5051 | 8.95 | 100% |
+| RawNet2 | attacked | 0.2829 | 0.5130 | +0.2301 | 4.44 | 94% |
+| RawGAT-ST (mul) | attacked | 0.1292 | 0.3915 | +0.2623 | 6.19 | 92% |
+| **RawGAT-ST-add** | **never seen** | 0.1023 | 0.1943 | **+0.0920** | **3.20** | 89% |
+| **RawGAT-ST-cat** | **never seen** | 0.2473 | 0.5518 | **+0.3046** | **5.96** | 83% |
+
+Both unseen variants move significantly. But the spread is the finding: the
+`cat` sibling picks up 84% of the attacked detectors' mean gain and the `add`
+sibling only 25%, despite identical architecture and training data. **Even
+separately trained copies of one model differ by more than 3x in how much of
+the edit transfers**, which is a warning against assuming any unseen detector
+behaves like the attacked ones. Consistent with leave-one-detector-out (7d),
+where a held-out detector received about a third of the optimised gain.
+
+Similarity *rose* on these clips (+0.0087, t = 3.08). Perceptual quality did
+not come free:
+
+| | baseline | edit x10 | change | t | worse on |
+|---|---|---|---|---|---|
+| PESQ | 3.258 | 3.037 | **-0.220** | -4.60 | 72% of clips |
+| STOI | 0.981 | 0.977 | -0.004 | -2.80 | 72% of clips |
+
+This corrects section 7h (see the note there). Four passes measured PESQ
++0.04; ten passes cost 0.22 -- about a third of PGD's -0.64. The pass count is
+therefore a trade-off, not a free setting.
+
+**The far-transfer test has not been run.** No detector of a genuinely
+different design has weights on this machine. The official ASVspoof 2021
+LFCC-LCNN baseline (hand-crafted LFCC features plus a light CNN, 1.0 MB from
+asvspoof.org) would be the right one. `probe_transfer.py` already picks it up
+through a `lcnn_detector` adapter if present and `--rescore` re-scores the
+kept clips without regenerating. Until that runs, every result in this
+document is established only for the RawGAT-ST / AASIST / RawNet2 families.
 
 ### Honest limits
 
