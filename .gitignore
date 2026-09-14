@@ -14,3 +14,9 @@ __pycache__/
 *.mp3
 *.mp4
 *.wav
+
+# model checkpoints and PGD datasets live in RESULTS_ROOT; never commit them
+*.pt
+*.pth
+*.onnx
+*.safetensors

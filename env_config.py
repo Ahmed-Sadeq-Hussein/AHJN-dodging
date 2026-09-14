@@ -65,3 +65,12 @@ CAMPPLUS_ONNX      = _optional(
     "CAMPPLUS_ONNX_PATH",
     VOICE_CLONING_ROOT / "models" / "CosyVoice2-0.5B" / "campplus.onnx",
 )
+
+# The RL reward (reward.py) needs the four anti-spoofing detectors, which only
+# import under the "voicefake" env's torch/numpy pins -- incompatible with the
+# "voiceclone" env the policy/CosyVoice2/reward loop itself runs under (see
+# requirements.txt's header comment). So detector scoring happens in a
+# subprocess: reward.py shells out to this interpreter running
+# `detectors.py --json`. Not required by any script except reward.py, so it's
+# optional here and only raises when reward.py actually tries to use it.
+VOICEFAKE_PYTHON = os.environ.get("VOICEFAKE_PYTHON")

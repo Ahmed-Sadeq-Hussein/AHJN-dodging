@@ -474,23 +474,41 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser(
         description="Score audio for AI-generated speech (1=human, 0=AI)"
     )
-    ap.add_argument("audio", nargs="?", help="audio file to score")
+    ap.add_argument("audio", nargs="*", help="audio file(s) to score")
     ap.add_argument("--models", nargs="*", default=None,
                     help=f"subset of {list(MODEL_ORDER)}")
     ap.add_argument("--aggregate", default="mean", choices=["mean", "min", "median"])
     ap.add_argument("--device", default=None)
     ap.add_argument("--check", action="store_true",
                     help="verify ROOT can find every model, then exit")
+    ap.add_argument("--json", action="store_true",
+                    help="print {path: {model: score}} as JSON on stdout, nothing "
+                         "else. Always keyed by path, even for one file, so callers "
+                         "have a single shape to parse (see reward.py). Passing many "
+                         "files loads the four models once and scores them all -- "
+                         "model loading dominates a single-file call (~13 s), so "
+                         "batching a PPO rollout through one invocation matters.")
     args = ap.parse_args()
 
     if args.check:
         sys.exit(1 if any(check_install().values()) else 0)
     if not args.audio:
-        ap.error("an audio file is required (or pass --check)")
+        ap.error("at least one audio file is required (or pass --check)")
 
-    res = score_file_dict(args.audio, args.models,
-                          aggregate=args.aggregate, device=args.device)
-    width = max(len(k) for k in res)
-    for k, v in res.items():
-        bar = "#" * int(round(v * 30))
-        print(f"{k:<{width}}  {v:.4f}  {bar:<30}  {'human' if v >= 0.5 else 'AI'}")
+    results = {
+        path: score_file_dict(path, args.models,
+                              aggregate=args.aggregate, device=args.device)
+        for path in args.audio
+    }
+
+    if args.json:
+        import json
+        print(json.dumps(results))
+    else:
+        for path, res in results.items():
+            if len(results) > 1:
+                print(f"\n{path}")
+            width = max(len(k) for k in res)
+            for k, v in res.items():
+                bar = "#" * int(round(v * 30))
+                print(f"{k:<{width}}  {v:.4f}  {bar:<30}  {'human' if v >= 0.5 else 'AI'}")

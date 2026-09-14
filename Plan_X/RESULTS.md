@@ -1,0 +1,792 @@
+# Plan_X — results and reasoning
+
+What was run, what came out, and why each conclusion follows. Figures are in
+this folder; every number below is reproducible from the scripts named
+against it.
+
+Status: complete. Sections 0–6 cover the two RL designs and the audits that
+explain why they failed; section 7 covers the distillation run that worked.
+
+---
+
+## 0. The premise, and how it changed
+
+The project goal is to make CosyVoice2 clones read as *human* to four
+anti-spoofing detectors (AASIST, AASIST-L, RawNet2, RawGAT-ST; 1 = human,
+0 = AI) without losing speaker similarity or intelligibility.
+
+The first measurement undercut the premise. A clone of `ahmed`, from a clean
+recording, scores **0.997 / 0.984 / 1.000 / 1.000**. CosyVoice2 already
+defeats all four detectors outright when the reference is clean; there is
+nothing to evade.
+
+The voices with headroom — riven 0.089, swain 0.087, samira 0.170 — are game
+voice-over. Their *reference files* fail RawNet2 and RawGAT-ST before any
+cloning happens. So the detectable artefacts are inherited from studio
+processing in the reference, not produced by the synthesiser. That reframes
+the problem, and it is worth stating plainly because it means a large part of
+the measured "detection" is a property of the source audio.
+
+This spread is the single largest effect in the whole project: **0.24
+(evelynn) to 0.96 (ahmed) at baseline**, larger than any intervention
+described below.
+
+---
+
+## 1. The intervention point
+
+CosyVoice2 runs text → speech tokens → flow decoder → **mel** → HiFT vocoder →
+waveform. Everything from the mel onward is differentiable and locally held,
+so the mel is the natural place to intervene: late enough to have direct
+acoustic effect, early enough that the vocoder smooths discontinuities.
+
+`mel_policy.mel_edit_hook` intercepts the mel and adds a learned residual Δ
+before the vocoder. Two implementation facts cost real time and are recorded
+so they are not rediscovered:
+
+- **`torch.inference_mode()` poisons autograd.** CosyVoice2 generates under
+  it, and tensors created there can never enter a graph. The first PGD probe
+  silently optimised nothing for 60 steps while reporting `|delta| = 0.0000`,
+  and nearly produced the conclusion "mel editing cannot work". The escape is
+  `torch.inference_mode(False)` for policy tensors and the decorator's
+  `__wrapped__` attribute for `hift.inference`.
+- **cuDNN refuses RNN backward in `eval()`**, and RawNet2 contains a GRU.
+  Switching to `train()` would flip its BatchNorm to batch statistics and
+  change the very scores being measured, so the fix is to disable cuDNN
+  (`diffscore.differentiable()`) and accept native kernels.
+
+---
+
+## 2. Feasibility: what is reachable at all (figure 6)
+
+`probe_pgd.py` answers the question RL is an expensive way to ask: with full
+white-box access, how far can a bounded mel edit move the objective?
+
+| | baseline | PGD, 60 steps |
+|---|---|---|
+| soft-min | 0.085 | **0.666** |
+| similarity | 0.836 | 0.860 (*improved*) |
+| WER | 11.8% | 11.8% (unchanged) |
+
+Evasion is reachable, cheaply, without damaging the voice. This is an upper
+bound on what any policy could learn, and it establishes that later failures
+are failures of *optimisation*, not of the intervention point.
+
+The trajectory matters as much as the endpoint. PGD needs **|Δ| ≈ 0.16** to
+break through — the jump happens between step 20 and step 30, as |Δ| goes
+0.135 → 0.162. At |Δ| = 0.0065 (step 1) the objective has not moved at all.
+
+---
+
+## 3. Design A — PPO-Lagrangian (figures 1, 2, 3)
+
+Constrained policy gradient: maximise the detector soft-min subject to
+similarity ≥ 0.70 and WER ≤ 0.15, with dual-adapted multipliers. 130
+iterations, 1,040 episodes.
+
+**Result: significant degradation.** Slope −0.000727, **t = −7.26**. The
+policy made detection *easier* than doing nothing.
+
+**Cause, from figure 2:** pure soft-min at k = 8 hands 50.2% / 49.8% of its
+gradient to RawNet2 / RawGAT-ST and **0.06% / 0.03% to AASIST / AASIST-L**.
+The two detectors that were already passing were undefended, and the policy
+degraded them (AASIST t = −3.54, AASIST-L t = −2.47) while never improving
+the two it was optimising. The aggregator, not the algorithm, chose that
+outcome.
+
+---
+
+## 4. Design B — SAC with a gradient hint (figures 1b, 4, 5)
+
+Three changes: a blended objective (0.5·soft-min + 0.5·mean) so no detector
+carries near-zero weight; a **gradient hint** — d(objective)/d(mel), the
+signal Design A discarded — as extra actor input channels; and twin Q critics
+conditioned on the action, since Design A's V(mel) could say an utterance was
+hard but nothing about whether an edit was good.
+
+396 iterations across two sessions, 2,520 episodes in the 9-hour run.
+
+**Result: flat. Slope +0.000033, t = +0.46**, against a resolvable threshold
+of ±0.045. This is a *well-powered* null, not an underpowered one.
+
+What Design B did fix:
+
+- degradation eliminated: t = −7.26 → **+0.46**
+- the previously-undefended detectors now improve: AASIST **+0.034**,
+  AASIST-L **+0.016**
+
+What it did not fix: anything about the actual objective.
+
+**Figure 4 rules out action scale.** The `max_delta` cap of 0.05 held |Δ| at
+0.0072 mean, with 0.0% of iterations above 0.02 — it never approached its own
+ceiling, and in fact *shrank* (t = −4.24).
+
+**Figure 5 says what went wrong.** `log_std` climbed −4.30 → −3.43
+(t = +1440) and the SAC temperature α rose 0.060 → 0.115 (t = +316) — the
+entropy controller *increasing* exploration for nine hours straight. Q-loss
+was low (~0.03), so the critic predicts reward accurately but cannot **rank**
+two candidate edits. When ranking fails, entropy is the only term left that
+the objective can improve, and it inflates.
+
+**Constraints never bound**: similarity 0.827, WER 5.2%, λ pinned at its
+0.250 floor throughout. The penalties the brief asked for worked; they were
+never the limiting factor.
+
+---
+
+## 5. A vs B on unseen voices (figures 7, 8)
+
+`eval_ab_voices.py`. Five voices drawn at random
+(`random.Random(20260906).sample`) — Tywin_2, ahmed, evelynn, mordekaiser,
+thresh, all held-out — plus the four training voices as a reference group.
+Four utterances each, three arms per utterance from one shared seed, so the
+mel edit is the only difference between arms.
+
+| | mean detector | | | soft-min | | |
+|---|---|---|---|---|---|---|
+| | base | A | B | base | A | B |
+| 5 random voices | 0.437 | 0.412 (−0.025) | 0.420 (−0.017) | 0.271 | 0.261 | 0.276 |
+| 4 trained voices | 0.366 | 0.304 (**−0.062**) | 0.366 (−0.001) | 0.199 | 0.167 | 0.199 |
+
+Pooled over 36 clips: **Design A −0.0417 mean detector, t = −3.78**
+(significant, worse than doing nothing). **Design B −0.0095, t = −0.80** —
+indistinguishable from doing nothing, and neutral on its own training voices
+to three decimal places.
+
+**A correction this evaluation forced.** Earlier reporting claimed Design B
+"sustained soft-min at 2.4× baseline". That compared B's four-voice average
+(0.21) against *riven's* baseline alone (0.087). The correct paired control
+across the same four voices is **0.199**, and B scores **0.199**. There was
+no gain; there was a mismatched denominator.
+
+**Why the average is zero:** B moves riven **+0.075** but swain −0.027,
+samira −0.023, jhin −0.028. Not a learned function — one voice benefiting
+while the rest pay for it.
+
+Neither design costs quality (figure 8): similarity 0.78–0.83 against a 0.70
+floor, WER 5.5% → 6.0% / 6.2% against a 15% ceiling.
+
+---
+
+## 6. Two findings that came from listening
+
+### 6a. The magnitude was never the barrier
+
+The obvious reading of section 4 is that capping |Δ| at 0.05 made PGD's
+0.16-magnitude solution unreachable. It did — but that is not why Design B
+failed. Run **B3h**, before the cap, sat at **|Δ| 0.12–0.20 for its entire
+length**, squarely in PGD's solution range, and reached soft-min 0.186. Over
+that run, **corr(|Δ|, soft-min) = −0.554**: at the right magnitude, larger
+edits were *worse*.
+
+So the barrier is **direction**, not scale. PGD's solution is one specific
+vector in 80×T dimensions; moving 0.16 in any other direction is loud noise.
+Gradient descent finds it in 60 steps and sampling does not. This is the
+central negative result of the project, and it is what motivates section 7.
+
+### 6b. Detection difficulty scales with clip length
+
+`demo_listen.py` on evelynn, same voice, three script lengths:
+
+| script | length | baseline soft-min | RawNet2 | RawGAT-ST |
+|---|---|---|---|---|
+| short | 4.6 s | 0.356 | 0.500 | 0.499 |
+| medium | 14.5 s | 0.154 | 0.251 | 0.117 |
+| long | 50 s | **0.050** | **0.0007** | **0.0001** |
+
+A **7× collapse** in baseline soft-min from 4.6 s to 50 s. More audio means
+more evidence and the detectors converge hard. Every training run in this
+project used 5–15 s utterances — the easiest regime — so all results above
+describe short-form only. This was not measured until late and should be
+treated as a scope limit on everything else.
+
+### 6c. Perceptual quality was never measured until now
+
+The brief says "maintain MOS and WER". Only WER and speaker similarity were
+tracked, and both are blind to buzz, roughness and phase smear — speaker
+embeddings are *trained* to be invariant to channel distortion. `quality.py`
+now adds torchaudio SQUIM. Applied to the PGD attack:
+
+| | baseline | PGD | Δ |
+|---|---|---|---|
+| STOI | 0.997 | 0.985 | −0.012 |
+| PESQ | 4.030 | 3.358 | **−0.672** |
+| SI-SDR | 26.19 dB | 21.54 dB | −4.65 dB |
+
+PGD costs real but moderate quality: intelligibility intact, PESQ from
+excellent to good. Note SQUIM's MOS estimate saturated at 4.995 for both arms
+and was uninformative here.
+
+---
+
+## 7. Distillation from PGD (figures 9, 12)
+
+### Rationale
+
+Sections 3–6 converge on one diagnosis. The intervention point works
+(section 2), the action magnitude is reachable (6a), the constraints never
+bind (4), and the aggregator bug is fixed (4) — yet RL produces nothing,
+because finding the right *direction* in 80×T dimensions by sampling is
+hopeless while gradient descent does it in 60 steps.
+
+So supply the target instead of discovering it. `collect_pgd.py` runs PGD on
+242 (voice, sentence) pairs and stores (mel, gradient hint, Δ*);
+`distill.py` trains the actor to predict Δ* by regression. The network never
+explores — it only interpolates between solved instances.
+
+### The dataset
+
+242 examples, 11 voices × 22 sentences, ~44 s each (≈3 h).
+
+| | value |
+|---|---|
+| soft-min | 0.284 → **0.574** (gain +0.290) |
+| objective | 0.358 → 0.683 |
+| similarity cost | **+0.0115** mean (negative — i.e. *improved* — on 6 of 11 voices) |
+| \|Δ\| | 0.161 |
+
+PGD's success is strongly voice-dependent: swain +0.436, jhin +0.424,
+tahmkench +0.424, but ahmed +0.042 (already at 0.951, nothing to gain) and
+david reaches only 0.159 from a baseline of 0.065. The 0.666 headline from
+section 2 was one favourable voice, not a universal ceiling.
+
+**Target filtering.** PGD is unconstrained — it maximises the detector
+objective and nothing else. On `ahmed` it spends |Δ| = 0.17 to gain nothing
+while dropping similarity 0.824 → 0.664. Regressing onto that would teach the
+network to make a large damaging edit on exactly the inputs needing none.
+Targets with gain < 0.02 or similarity cost > 0.10 are dropped: **221 of 242
+kept** (12 no-gain, 9 similarity-cost).
+
+### The control that settles the open question
+
+Before reading any learning curve: apply **one fixed per-channel average
+edit** — the mean of all PGD solutions — blind to every utterance.
+
+**Result: −5.4% of PGD's gain** (−15.5% on the final run's larger sample).
+Worse than no edit at all.
+
+So no universal perturbation exists. PGD's solution is genuinely
+utterance-specific. This is the result that makes the RL failure
+*intelligible* rather than merely disappointing: there was never a single
+constant edit to converge on, and the useful function is conditional on the
+input.
+
+### Capacity is the enemy (figure 12)
+
+Every sweep run trains on the same 221 targets. Judged by the fraction of
+PGD's objective gain recovered on held-out sentences, pushed through HiFT and
+the real detectors:
+
+| config | params | receptive field | recovered |
+|---|---|---|---|
+| s_wide | 270k | 1.33 s | **−0.4%** |
+| s_narrow | 98k | 0.14 s | +10.0% |
+| s_wd (wd 1e-2) | 270k | 1.33 s | +13.5% |
+| s_lowlr_wd | 98k | 0.31 s | +21.1% |
+| s_noise | 270k | 1.33 s | +23.8% |
+| s_tiny | 33k | 0.10 s | +24.6% |
+| s_lowlr | 98k | 0.31 s | +25.9% |
+| **r_micro** | **21k** | **0.05 s** | **+33.6%** |
+| final (r_micro, longer) | 21k | 0.05 s | +27.0%, **best +41.8%** |
+
+Monotone in capacity: with 221 examples in an 80×T output space, every
+reduction helped. The initial instinct to widen the receptive field to 1.33 s
+was exactly backwards.
+
+**The transferable signal is nearly pointwise.** The best model sees five mel
+frames — 0.05 s. Whatever structure in PGD's attack generalises across
+utterances is a local per-frame spectral reshaping, not a temporal pattern.
+
+Two other diagnostics from figure 9. Direction agreement generalises weakly
+but genuinely: train cosine +0.163 against val +0.139 — a small gap, unlike
+the wide net's +0.449 / +0.047, which was almost pure memorisation. And the
+magnitude ratio settles at **0.08**: the distilled edit is one-twelfth of
+PGD's size, yet recovers a third of its gain. It is not copying PGD, it is
+extracting the cheap, shared part of the attack.
+
+*(One sweep config, `r_nano` at hidden = 12, failed to build — GroupNorm
+requires channels divisible by its 8 groups. A configuration error in the
+sweep, not a code defect; hidden = 24 was already the winner.)*
+
+### Held-out voices and held-out sentences (figures 10, 11)
+
+`eval_final.py`. Four voices in no training set (Tywin_2, evelynn,
+mordekaiser, thresh) and six sentences in no collection run, plus four
+collection voices as a reference group. Three arms from one shared seed per
+utterance, so the mel edit is the only difference.
+
+**HELD-OUT voices, unseen sentences** (24 clips), distilled vs baseline:
+
+| metric | baseline | Design B | distilled | Δ | t |
+|---|---|---|---|---|---|
+| mean detector | 0.3400 | 0.3345 | **0.4106** | **+0.0707** | **3.97** |
+| soft-min | 0.1132 | 0.1161 | **0.1496** | **+0.0365** | **3.03** |
+| similarity | 0.7888 | 0.7897 | 0.7873 | −0.0015 | −0.65 |
+| WER | 6.74% | 7.31% | 7.56% | +0.82pp | 1.01 |
+| PESQ | 2.832 | 2.878 | 2.866 | +0.034 | 1.04 |
+| STOI | 0.9778 | 0.9791 | 0.9766 | −0.0011 | −0.72 |
+
+**REFERENCE voices, unseen sentences** (24 clips): mean detector +0.1000
+(t = 6.44), soft-min +0.0649 (t = 3.34).
+
+**Every one of the eight voices improved**, four of them never seen at any
+stage of training:
+
+| voice | set | baseline | Design B | distilled |
+|---|---|---|---|---|
+| Tywin_2 | held-out | 0.1346 | 0.1398 | 0.1776 |
+| evelynn | held-out | 0.1131 | 0.1135 | 0.1815 |
+| mordekaiser | held-out | 0.0987 | 0.0887 | 0.1010 |
+| thresh | held-out | 0.1062 | 0.1223 | 0.1385 |
+| Ego | reference | 0.3060 | 0.3290 | 0.4582 |
+| Joffrey | reference | 0.5155 | 0.5263 | 0.5776 |
+| Silco | reference | 0.1094 | 0.1090 | 0.1250 |
+| Tywin | reference | 0.5535 | 0.5072 | 0.5833 |
+
+**The cost is nil on every axis measured** (figure 11). Similarity, WER,
+PESQ and STOI are all statistically indistinguishable from baseline; PESQ is
+nominally *up*. This is the first intervention in the project that buys
+evasion without paying for it, and the only reason we can assert the
+perceptual half of that claim is that section 6c added the metric.
+
+### What this establishes
+
+Same objective, same intervention point, same four detectors, all evaluated
+on held-out voices with unseen sentences:
+
+| approach | cost | soft-min | vs baseline |
+|---|---|---|---|
+| baseline | — | 0.113 | — |
+| Design A (PPO, 1,040 episodes) | 4 GPU-h | — | significantly **worse**, t = −3.78 |
+| Design B (SAC, 2,520 episodes) | 12 GPU-h | 0.116 | +0.003, null |
+| distilled x1 (21k params) | 1 forward pass | 0.150 | +0.037, t = 3.03 |
+| **distilled x4** | **4 forward passes** | **0.239** | **+0.126, t = 4.17** |
+| PGD (per-utterance oracle) | 60 gradient steps | 0.574 | +0.290 |
+
+The RL failure was never about the intervention point, the action bound, the
+constraints, or the detector aggregator. It was that the useful edit function
+is conditional on the input, has no constant component to converge on
+(control: −5.4%), and lives in a direction that sampling cannot find. Given
+the answer as a supervised target, a **21,352-parameter network with a 0.05 s
+receptive field** learns roughly a third of it and transfers to unseen voices
+and unseen sentences at no measurable quality cost.
+
+### 7b. Iterating the distilled edit
+
+The distilled network predicts edits at |Δ| ≈ 0.08× PGD's magnitude while
+recovering ~35% of its gain. Two readings: it found a cheaper direction that
+would overshoot if scaled, or regression-to-the-mean shrank a correct
+direction. `probe_amplify.py` separates them on stored held-out-sentence
+mels, where nothing needs regenerating.
+
+**Scaling the edit fails. Iterating it compounds.**
+
+| scale | iters=1 | iters=2 | iters=3 | iters=4 | iters=5 |
+|---|---|---|---|---|---|
+| 0.5 | +33% | +44% | +53% | +56% | +65% |
+| **1.0** | +38% | +51% | +55% | +68% | **+76%** |
+| 1.5 | +34% | +52% | +65% | **+76%** | +71% |
+| 2.0 | +34% | −7% | +57% | | |
+| 4.0 | −43% | +4% | +4% | | |
+| 8.0 | −123% | −95% | −100% | | |
+
+At scale 1.0 the progression is monotone (38 → 51 → 55 → 68 → 76%), and
+absolute soft-min reaches **0.582 against PGD's 0.641** — 91% of the oracle's
+level — at |Δ| = 0.047, still 3.5× smaller than PGD's 0.161. Multiplying the
+edit by 4 or more is catastrophic (−43%, −123%).
+
+That asymmetry is the mechanism. A memorised displacement would improve under
+scaling and gain nothing from re-application. A learned *descent direction*
+behaves exactly the opposite way: one step of the right size helps, four
+steps help more, and one step of four times the size overshoots into
+nonsense. Each iteration re-computes the gradient hint on the already-edited
+mel, so the network is being asked a fresh question each pass rather than
+repeating an answer.
+
+This also explains the shrunken magnitude benignly. The network is not a
+weaker version of PGD; it is a *step operator* that PGD-style iteration can
+be built on, at four forward passes instead of sixty gradient steps.
+
+### 7c. Confirmed on held-out voices with 4 iterations (figures 10, 11, 13)
+
+Same protocol as above -- unseen voices, unseen sentences, shared seed -- with
+the distilled edit applied four times at scale 1.0.
+
+**HELD-OUT voices, unseen sentences** (24 clips):
+
+| metric | baseline | Design B | distilled x1 | **distilled x4** | delta | t |
+|---|---|---|---|---|---|---|
+| mean detector | 0.3400 | 0.3345 | 0.4106 | **0.5573** | **+0.2173** | **9.66** |
+| soft-min | 0.1132 | 0.1161 | 0.1496 | **0.2388** | **+0.1257** | **4.17** |
+| similarity | 0.7888 | 0.7897 | 0.7873 | **0.7952** | **+0.0064** | **2.05** |
+| WER | 6.74% | 7.31% | 7.56% | 6.78% | +0.03pp | 0.04 |
+| PESQ | 2.832 | 2.878 | 2.866 | 2.874 | +0.043 | 1.15 |
+| STOI | 0.9778 | 0.9791 | 0.9766 | 0.9764 | -0.0013 | -0.95 |
+
+**REFERENCE voices** (12 clips): mean detector +0.1919 (t = 4.20), soft-min
++0.1578 (t = 3.76).
+
+| voice | set | baseline | Design B | distilled x4 |
+|---|---|---|---|---|
+| Tywin_2 | held-out | 0.1346 | 0.1398 | **0.3406** |
+| evelynn | held-out | 0.1131 | 0.1135 | **0.2399** |
+| mordekaiser | held-out | 0.0987 | 0.0887 | **0.1486** |
+| thresh | held-out | 0.1062 | 0.1223 | **0.2262** |
+| Ego | reference | 0.3060 | 0.3290 | **0.4843** |
+| Joffrey | reference | 0.5155 | 0.5263 | **0.6528** |
+
+Iterating roughly **triples** the single-pass gain: soft-min +0.037 -> +0.126,
+mean detector +0.071 -> +0.217. Held-out soft-min reaches **2.1x baseline**.
+
+And the cost is still nothing. WER is unchanged (+0.03 percentage points),
+PESQ and STOI are flat, and **similarity significantly improves** (+0.0064,
+t = 2.05) -- the same effect PGD showed in section 2, where the attack raised
+similarity from 0.836 to 0.860. Whatever the edit removes appears to be
+artefact rather than speaker identity.
+
+### 7d. Leave-one-detector-out: does it transfer to a detector never optimised?
+
+The strongest claim so far is bounded by four specific checkpoints. To test
+whether the operator learned something about synthetic-speech artefacts in
+general, PGD targets were re-collected optimising **only AASIST, AASIST-L and
+RawNet2** (132 examples, 11 voices x 12 sentences). RawGAT-ST is scored
+throughout but influences neither the PGD target, nor the gradient hint at
+collection, nor the hint at inference -- `AmplifiedAdapter` takes the
+detector subset from the checkpoint, because computing the hint from all four
+would have quietly re-introduced the held-out detector and made the
+experiment meaningless.
+
+**PGD itself transfers**, measured on the targets:
+
+| detector | before | after | change | role |
+|---|---|---|---|---|
+| AASIST | 0.6476 | 0.9997 | +0.3521 | optimised |
+| AASIST-L | 0.4779 | 0.9994 | +0.5214 | optimised |
+| RawNet2 | 0.3228 | 0.5337 | +0.2109 | optimised |
+| **RawGAT-ST** | 0.2890 | 0.3604 | **+0.0714** | **HELD OUT** |
+
+t = +5.95, improved on 79% of examples.
+
+**So does the distilled operator**, on held-out voices with unseen sentences
+(24 clips, distilled x4):
+
+| detector | baseline | Design B | distilled x4 | change | t | role |
+|---|---|---|---|---|---|---|
+| AASIST | 0.3988 | 0.3506 | 0.5945 | +0.1957 | 2.66 | optimised |
+| AASIST-L | 0.4962 | 0.5227 | 0.7845 | +0.2883 | 4.28 | optimised |
+| RawNet2 | 0.3545 | 0.3357 | 0.5071 | +0.1526 | 2.74 | optimised |
+| **RawGAT-ST** | 0.1103 | 0.1290 | **0.1819** | **+0.0716** | **2.44** | **HELD OUT** |
+
+Aggregate on held-out voices: mean detector +0.1770 (t = 5.54), soft-min
++0.1055 (t = 2.78), similarity -0.0034 (not significant), WER +1.4pp (not
+significant).
+
+The held-out gain (+0.0716) is almost identical to what PGD transferred at
+target level (+0.0714). The operator inherits the attack's cross-detector
+generality rather than memorising three detectors' idiosyncrasies -- so the
+edit is acting on something the detectors share, not on per-model quirks.
+
+Two caveats. The transfer is real but **much smaller** than the optimised
+detectors' gains (+0.07 against +0.15 to +0.29), so most of the effect is
+still detector-specific. And this is one fold: RawGAT-ST was chosen because
+it is one of the two detectors that actually catch these voices, but a single
+holdout cannot say whether every detector transfers equally.
+
+### 7e. Long form: the gain does not survive length
+
+Section 6b showed baseline soft-min collapsing ~7x from 4.6 s to 50 s but
+never tested the working operator there. `probe_longform.py` runs three
+lengths built from unseen `EVAL_TEXTS`: 15 words (~4.6 s), 44 words
+(~13.6 s), 182 words (~72 s, which CosyVoice2 splits into 4 chunks).
+
+| voice | length | audio | baseline | distilled | gain |
+|---|---|---|---|---|---|
+| evelynn | short | 4.6 s | 0.0587 | 0.0868 (x4) | +0.028 |
+| evelynn | medium | 13.6 s | 0.0690 | **0.3277** (x4) | **+0.259** |
+| evelynn | long | ~72 s | 0.0717 | 0.0944 (x4) | +0.023 |
+| thresh | short | 4.6 s | 0.0684 | 0.0880 (x4) | +0.020 |
+| thresh | medium | 13.6 s | 0.0861 | 0.1551 (x4) | +0.069 |
+| thresh | long | ~72 s | 0.1876 | 0.1725 (x2) | **-0.015** |
+
+**Medium length is where the operator is strongest** -- evelynn's +0.259 is
+larger than anything in the main evaluation, which makes sense: 13.6 s is
+closest to the 5-15 s utterances every PGD target was collected on. At 72 s
+the gain is +0.023 and -0.015, i.e. gone.
+
+The likely mechanism is an aggregation mismatch rather than a capability
+failure. CosyVoice2 chunks long text and `mel_edit_hook` fires once per
+chunk, so the operator edits ~20 s mels independently. The detectors window
+the *concatenated* file into 64600-sample (~4 s) slices and average -- ~19
+windows for a 72 s clip against 1-2 for a training utterance. An edit tuned
+to raise a local objective is being diluted across an average it never saw.
+
+**An engineering constraint fell out of this too.** Four iterations on a 72 s
+clip exhaust a 10 GB card: each hint backpropagates through HiFT over a ~20 s
+mel plus all four detectors, and the peak is reached partway through the
+third voice. Two iterations complete. Long-form work therefore needs either
+gradient checkpointing, chunked hint computation, or a smaller detector
+batch -- `diffscore.detector_scores` now takes `max_windows` (default 8 in
+the hint) as a partial guard, and `probe_longform.py` frees cached blocks
+between clips, but neither is sufficient at four iterations.
+
+### 7f. Does dramatising the delivery help? Mostly no
+
+CosyVoice2's tokenizer accepts fine-grained prosody tags (`<strong>`,
+`[breath]`, `[quick_breath]`, `[laughter]`) and the build exposes
+`inference_instruct2` for natural-language style prompting. Neither was wired
+into `cloners.py`; both now are. Eight renditions of identical content were
+compared per voice and line (`prosody.py`, `probe_prosody.py`).
+
+**Two bugs had to be fixed before any number here meant anything.**
+
+The markup route needs `text_frontend=False` -- the English text normaliser
+rewrites punctuation and would strip the tags before the tokenizer sees them.
+And `inference_instruct2` silently ignored the instruction: `frontend_zero_shot`
+loads a cached speaker and discards `prompt_text` entirely whenever
+`zero_shot_spk_id` is non-empty (frontend.py:186), so two opposite
+instructions produced **byte-identical audio** (verified by md5). Passing an
+empty speaker id fixes it.
+
+**The first measurement was a spectacular false positive.** On one clip,
+`[breath]` tags took soft-min from 0.086 to 0.804 -- larger than every result
+in sections 3-7 combined. Controls were added to separate the mechanisms, and
+they held up at n=1: `neutral_long` (matched duration, no tags) gave +0.042,
+`emphasis` alone +0.002, `breath_only` +0.694. It looked like breath sounds
+specifically.
+
+Then it was run properly.
+
+| n | style | d soft-min | t | win rate |
+|---|---|---|---|---|
+| 36 (6 voices) | breathy | +0.0789 | 1.57 | 56% |
+| **72 (12 voices)** | **breathy** | **+0.0133** | **0.39** | **51%** |
+| 72 | breath_only | +0.0404 | 1.20 | 50% |
+| 72 | emphasis | +0.008 | 0.18 | -- |
+| 72 | pauses | -0.030 | -0.64 | -- |
+| 72 | instruct_dramatic | -0.039 | -0.84 | -- |
+
+**A 51% win rate is a coin flip.** The effect halved from n=36 to n=72 and the
+single clip that started this sat near the top of a range spanning -0.83 to
++0.90. Per-pair variance (sd 0.30) is roughly four times the effect.
+
+**But a real mechanism is hiding inside the null.** Per detector, breathy vs
+neutral over 72 pairs:
+
+| detector | change | t | front end |
+|---|---|---|---|
+| AASIST | +0.0667 | +1.59 | spectro-temporal graph attention |
+| AASIST-L | +0.0790 | +1.79 | spectro-temporal graph attention |
+| RawNet2 | **-0.0756** | **-1.55** | raw waveform (SincNet) |
+| RawGAT-ST | +0.0290 | +0.61 | raw waveform + graph attention |
+
+Breath tokens help the spectral-attention family and **hurt** the raw-waveform
+one. Inserted non-speech reads as human to a model looking at spectral
+structure and as artefact to a model looking at the waveform directly. The two
+cancel, which is exactly why soft-min -- a worst-case aggregator -- shows
+nothing. This is the same failure mode as Design A's aggregator problem
+(section 3), arriving from a completely different direction.
+
+**Instruct mode is currently unusable** regardless: WER runs 82-160%, i.e. the
+model speaks material that is not in the target text. Worth revisiting only if
+the instruct pathway is needed for its own sake.
+
+### 7g. Training on dramatised speech, and whether prosody multiplies the edit
+
+Two further questions: does PGD behave differently on expressive speech, and
+does an operator *trained* on it do better?
+
+**PGD is completely indifferent to delivery.** 82 targets collected on
+breathified text (`collect_pgd.py --breathify`), paired against the same
+(voice, sentence) pairs in the neutral corpus, both optimising all four
+detectors:
+
+| | neutral | breathy | diff | t |
+|---|---|---|---|---|
+| soft-min before | 0.2982 | 0.3401 | +0.042 | +1.98 |
+| soft-min after PGD | 0.5990 | 0.6516 | +0.053 | +1.63 |
+| **PGD objective gain** | +0.3310 | +0.3292 | **-0.0017** | **-0.08** |
+| \|delta\| | 0.1607 | 0.1607 | -0.0000 | -0.01 |
+| similarity cost | +0.0094 | +0.0089 | -0.0005 | -0.13 |
+
+Identical gain, identical edit magnitude, identical cost. Expressive prosody
+neither helps nor hinders the white-box attack.
+
+**Training on dramatised speech does not help either.** A distilled operator
+on the breathy corpus reached +36.6% best recovery from 51 training examples,
+against +41.8% from 221 neutral ones -- equivalent per example. Cross-evaluated
+on 4 held-out voices, both operators on both styles:
+
+| operator | test style | plain | edited | gain | t |
+|---|---|---|---|---|---|
+| neutral-trained | neutral | 0.1061 | 0.1652 | +0.0592 | 2.94 |
+| neutral-trained | breathy | 0.2297 | 0.3947 | +0.1650 | 4.31 |
+| breath-trained | neutral | 0.1061 | 0.1604 | +0.0543 | 2.93 |
+| breath-trained | breathy | 0.2297 | 0.3647 | +0.1350 | 4.03 |
+
+The neutral-trained operator is at least as good in every cell. Corpus style
+is not a useful training variable.
+
+**Does prosody multiply the edit?** On the first 4 voices the interaction
+looked strong (+0.1058, t = +2.38, larger on 71% of pairs). Given that this
+session had already produced two effects that evaporated under power, it was
+re-run on 6 more voices. Pooled over 10 voices, 60 pairs:
+
+| effect | value | t |
+|---|---|---|
+| edit gain on neutral speech | +0.1252 | **+5.14** |
+| edit gain on breathy speech | +0.1786 | **+7.56** |
+| interaction (breathy - neutral gain) | +0.0534 | +1.68 |
+| prosody alone | +0.0603 | +1.73 |
+
+The interaction halved and fell below significance, exactly as the
+prosody-alone effect did when n went 36 -> 72. **Three separate prosody
+effects in this session shrank by about half each time the sample doubled**,
+which is the signature of noise, not of a small real effect being resolved.
+
+What *is* solid is the operator itself: +0.125 on neutral speech (t = 5.14)
+and +0.179 on breathy (t = 7.56), the strongest and best-powered result in the
+project. Absolute levels, pooled over 10 voices:
+
+| condition | soft-min |
+|---|---|
+| neutral, no edit | 0.2223 |
+| neutral + edit | 0.3475 |
+| breathy, no edit | 0.2826 |
+| **breathy + edit** | **0.4611** |
+
+The best condition is 2.07x the worst. Whether the breathy half of that is
+real remains unproven; the edit half is not in doubt.
+
+### 7h. Ten passes, not four -- the operator catches its teacher
+
+Section 7b stopped the iteration scan at 5 passes with the curve still
+rising, and every evaluation since used 4. Extending the scan on stored
+held-out-sentence mels:
+
+| passes | 1 | 2 | 4 | 6 | 8 | **10** | 12 |
+|---|---|---|---|---|---|---|---|
+| soft-min | 0.446 | 0.477 | 0.525 | 0.574 | 0.598 | **0.642** | 0.608 |
+| % of PGD's gain recovered | +36 | +54 | +73 | +82 | +89 | **+97** | +95 |
+
+PGD reaches 0.6325 on the same mels in 60 gradient steps. **Ten forward
+passes reach 0.6416 -- 97.1% of the gain, at |delta| = 0.068, an edit 2.4x
+smaller than PGD's 0.161.** Twelve passes is slightly worse, so the optimum
+is near ten.
+
+Confirmed end-to-end on held-out voices with unseen sentences (24 clips):
+
+| metric | baseline | Design B | distilled x4 | **distilled x10** | delta | t |
+|---|---|---|---|---|---|---|
+| mean detector | 0.3400 | 0.3345 | 0.5573 | **0.6934** | **+0.3535** | **12.26** |
+| soft-min | 0.1132 | 0.1161 | 0.2388 | **0.3727** | **+0.2595** | **4.52** |
+| similarity | 0.7888 | 0.7897 | 0.7952 | 0.7907 | +0.0019 | 0.27 |
+| WER | 6.74% | 7.31% | 6.78% | **6.24%** | **-0.50pp** | -0.45 |
+
+Mean detector score more than doubles, and WER *improves*. This doubles the
+previous best (+0.126 at four passes) for no cost beyond six more forward
+passes, and it is the strongest result in the project by a wide margin
+(t = 12.26).
+
+It is also the cleanest evidence yet for the step-operator reading in 7b: a
+memorised displacement could not keep improving through ten successive
+re-hinted applications.
+
+### 7i. Cleaning the reference: partially confirmed, with a real trade-off
+
+Section 0 identified recording provenance as the largest effect anywhere in
+this project (0.24 to 0.96 across voices) and it had never been tested.
+`probe_reference.py` treats reference.wav before enrolment and measures both
+the reference's own detector scores and the resulting clone's.
+
+| treatment | reference soft-min | clone soft-min | d vs raw | t | d sim |
+|---|---|---|---|---|---|
+| raw | 0.0577 | 0.1447 | -- | -- | -- |
+| denoise (spectral gate) | **0.1283** | 0.2382 | **+0.0935** | 1.58 | **-0.1026** |
+| highpass 80 Hz | 0.0585 | 0.0831 | -0.0616 | **-2.36** | -0.0073 |
+| normalise to -3 dBFS | 0.0661 | 0.1902 | +0.0455 | 1.67 | -0.0037 |
+| combined | 0.1069 | 0.1579 | +0.0132 | 0.32 | -0.1308 |
+
+Denoising **doubles the reference file's own soft-min** (0.058 -> 0.128),
+which directly supports the section 0 hypothesis: part of what the detectors
+react to is present in the reference before synthesis. It lifts the clone by
++0.094 -- but at 0.10 similarity, taking the clone from 0.81 to 0.71, against
+a 0.70 constraint floor. That is not free.
+
+Normalisation is the interesting one: +0.046 soft-min for -0.004 similarity
+and 2.4 points *better* WER. Essentially free, if small.
+
+High-pass filtering makes things significantly **worse** (t = -2.36),
+which is informative in itself -- the low-frequency content the filter
+removes is apparently doing some of the work of looking human.
+
+Neither positive result is significant at n = 24, and per-voice the variance
+is severe: evelynn's clone goes 0.129 -> 0.420 under denoising while jhin's
+goes 0.254 -> 0.107. Given that three prosody effects in this session halved
+under power, these should be treated as suggestive only.
+
+### 7j. Can the teacher go higher? Yes, but the cost is unmeasured
+
+Since the operator now recovers 97% of PGD's gain, further progress has to
+come from a better teacher, not a better student. PGD's settings had never
+been tuned -- 60 steps / lr 0.05 / max_delta 0.6 were set once in the original
+feasibility probe and inherited by every dataset since.
+
+**A first sweep was invalid and is recorded here as a warning.** Selecting
+examples alphabetically picked ten whose baseline soft-min was already 0.92;
+PGD saturates those at 1.0 under any setting, so the entire grid came out
+flat (0.9998-1.0000) and appeared to show the teacher was maxed out. The
+teacher's ceiling is only meaningful on clips the detectors actually catch.
+
+Re-run on the eight hardest examples (baseline soft-min 0.0130):
+
+| steps | lr | soft-min | \|delta\| | s/example |
+|---|---|---|---|---|
+| 60 (current) | 0.05 | 0.1698 | 0.159 | 28 |
+| 60 | 0.12 | 0.1805 | 0.307 | 28 |
+| 150 | 0.05 | 0.1911 | 0.169 | 71 |
+| **150** | **0.12** | **0.2532** | **0.324** | 71 |
+
+The best configuration delivers **1.53x the teacher's gain on hard clips**,
+but doubles the edit magnitude. Whether that is usable depends on what the
+larger edit costs in similarity and PESQ -- and that measurement was still
+running when the session ended, so **the stronger teacher is currently an
+unexploited lead, not a result.** It should be the first thing checked next:
+if the doubled edit holds similarity, re-collecting targets at 150/0.12 is
+the clearest remaining path to raising the ceiling the student is now
+pressed against.
+
+### Honest limits
+
+- Four iterations recover ~76% of PGD's gain on held-out sentences, not all
+  of it. PGD remains better per utterance; distillation buys amortisation —
+  four forward passes instead of sixty gradient steps — at most of the value.
+- Absolute soft-min on held-out voices is 0.239. Most of these clips would
+  still be caught. This is a large *relative* improvement, not evasion.
+- The scale/iteration setting was chosen on 12–18 stored held-out-sentence
+  mels. Scale 1.0 was kept deliberately untuned to limit selection on that
+  small sample; iters = 4 was confirmed independently on held-out voices.
+- Everything here is short-form (5–15 s). Section 6b shows baseline soft-min
+  collapsing 7× by 50 s, and nothing in this section was tested there.
+- 221 training targets is small. The capacity sweep is monotone all the way
+  down, which usually means more data would help more than more model.
+- Detector scores come from four specific checkpoints. Nothing here claims
+  transfer to detectors outside this set.
+
+---
+
+## Reproducing
+
+```bash
+python probe_pgd.py --voice riven --steps 60          # section 2
+python analyze_run.py --run designA_budget4h          # section 3
+python analyze_run.py --run designB_B9h               # section 4
+python eval_ab_voices.py --voices Tywin_2 ahmed evelynn mordekaiser thresh riven swain samira jhin --pairs 4
+python plot_ab_voices.py                              # figures 7, 8
+python demo_listen.py --voice evelynn --run designB_B9h   # section 6b
+python quality.py --pairs base.wav edited.wav --reference reference.wav
+
+python collect_pgd.py --max-hours 3.3                 # section 7 dataset
+python distill.py --run-id final --dilations 1 --hidden 24     --weight-decay 1e-3 --lr 1e-4 --input-noise 0.15 --max-hours 0.5
+python eval_final.py --distill-run distill_final      # held-out evaluation
+python plot_distill.py --run distill_final --control -0.155   # figures 9-12
+```

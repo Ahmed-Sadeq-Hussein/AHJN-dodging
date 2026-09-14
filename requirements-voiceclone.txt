@@ -39,6 +39,22 @@
 # 4. `x-transformers` is NOT needed: it is only used by the DiT flow, and
 #    CosyVoice2's cosyvoice2.yaml uses CausalConditionalDecoder. Left out.
 #
+# 5. WINDOWS SMART APP CONTROL. On 2026-09-07 it began refusing unsigned
+#    native extensions partway through a session ("An Application Control
+#    policy has blocked this file", WinError 4551) -- first
+#    tiktoken/_tiktoken.pyd, then llvmlite.dll (which llvmlite's own error
+#    handling reports misleadingly as "could not find/load shared object").
+#    Nothing on disk changed; the verdicts are reputation-based and can flip.
+#    Without both, whisper cannot import, and CosyVoice2's frontend imports
+#    whisper at module level, so ALL generation fails. The older builds
+#    pinned below are accepted by the policy:
+#        tiktoken 0.14.0 -> 0.7.0,  llvmlite 0.49.0 -> 0.42.0,
+#        numba 0.67.0 -> 0.59.1
+#    Side effect: lightning 2.2.4 now reports unmet pins (fsspec<2025,
+#    packaging<25). Nothing has failed because of it. To diagnose a future
+#    block, load the DLL directly with ctypes.CDLL -- that surfaces the real
+#    policy error that library wrappers hide.
+#
 # Also required outside pip, downloaded on first use:
 #   - NLTK data for g2p_en (MeloTTS English):
 #       python -c "import nltk; [nltk.download(p) for p in
@@ -72,6 +88,8 @@ einops==0.8.2
 hydra-core==1.3.6
 inflect==7.5.0
 librosa==0.11.0
+llvmlite==0.42.0         # 0.49.0 blocked by Smart App Control, see trap 5
+numba==0.59.1            # must match llvmlite
 matplotlib==3.10.9
 modelscope==1.39.1
 omegaconf==2.3.1
@@ -82,7 +100,7 @@ pyworld==0.3.5           # same
 rootutils==1.0.7
 scipy==1.15.3
 soundfile==0.14.0
-tiktoken==0.14.0
+tiktoken==0.7.0          # 0.14.0 blocked by Smart App Control, see trap 5
 tqdm==4.70.0
 transformers==4.51.3
 Unidecode==1.4.0
@@ -90,6 +108,13 @@ wetext==0.1.7
 wget==3.2
 gdown==6.1.0
 rich==13.9.4
+
+# --- added for Plan_X evaluation --------------------------------------------
+pystoi==0.4.1            # quality.py -- STOI
+noisereduce==3.0.3       # probe_reference.py -- spectral-gate denoising
+# quality.py also uses torchaudio's SQUIM_OBJECTIVE / SQUIM_SUBJECTIVE, which
+# download ~390 MB of weights on first use. The `pesq` package itself fails to
+# build a wheel on this machine and is NOT required; SQUIM estimates it.
 
 # install these with --no-deps so they cannot pull a different torch:
 #   pip install --no-deps lightning==2.2.4 pytorch-lightning==2.2.4 \

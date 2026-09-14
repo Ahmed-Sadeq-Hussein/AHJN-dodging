@@ -350,6 +350,31 @@ def _next_out_path(voice: Voice, out_dir: Path) -> Path:
         n += 1
 
 
+# The fine-grained prosody tags this CosyVoice2 build's tokenizer recognises
+# (cosyvoice/tokenizer/tokenizer.py). Anything here must reach the tokenizer
+# intact, so its presence switches the text frontend off.
+MARKUP_TOKENS = ("<strong>", "</strong>", "[breath]", "[quick_breath]",
+                 "[laughter]", "<laughter>", "</laughter>", "[cough]",
+                 "[noise]", "[clucking]", "[accent]")
+
+
+def _has_markup(text: str) -> bool:
+    return any(tok in text for tok in MARKUP_TOKENS)
+
+
+def strip_markup(text: str) -> str:
+    """The words actually spoken, for WER scoring.
+
+    A transcript compared against text containing '<strong>' would count the
+    tag as a missed word and inflate WER for every expressive variant, which
+    would look exactly like the prosody damaging intelligibility.
+    """
+    out = text
+    for tok in MARKUP_TOKENS:
+        out = out.replace(tok, " ")
+    return " ".join(out.split())
+
+
 def generate(
     text: str,
     audio: str | Path,
@@ -361,6 +386,8 @@ def generate(
     language: str = "EN",
     speaker: str | None = None,
     tau: float = 0.3,
+    instruct: str | None = None,
+    text_frontend: bool | None = None,
 ) -> Path:
     """Speak ``text`` in the voice of a previously enrolled clip.
 
@@ -398,16 +425,46 @@ def generate(
         prompt_text = voice.payload.get("prompt_text")
         prompt_wav = voice.payload["prompt_wav"]
 
-        if prompt_text:
+        # Prosody control has two routes in this build, and they are
+        # independent:
+        #
+        #   instruct=...       natural-language style prompting via
+        #                      inference_instruct2 ("speak with rising anger")
+        #   markup in `text`   fine-grained tokens the tokenizer knows:
+        #                      <strong></strong>, [breath], [quick_breath],
+        #                      [laughter], <laughter></laughter>
+        #
+        # The markup route needs text_frontend=False, because the English text
+        # normaliser rewrites punctuation and would otherwise mangle or drop
+        # the tags before the tokenizer ever sees them.
+        tf = text_frontend
+        if tf is None:
+            tf = not _has_markup(text)
+
+        if instruct:
+            # zero_shot_spk_id MUST be empty here. frontend_zero_shot ignores
+            # prompt_text entirely when a cached speaker id is supplied
+            # (frontend.py:186 just loads spk2info), so passing spk_id makes
+            # the instruction a no-op -- two opposite instructions produced
+            # byte-identical audio until this was found. The cost is that the
+            # reference features are recomputed per call.
+            chunks = net.inference_instruct2(
+                text, instruct, prompt_wav,
+                zero_shot_spk_id="", stream=False, speed=speed,
+                text_frontend=tf,
+            )
+        elif prompt_text:
             chunks = net.inference_zero_shot(
                 text, prompt_text, prompt_wav,
                 zero_shot_spk_id=spk_id, stream=False, speed=speed,
+                text_frontend=tf,
             )
         else:
             # no transcript available -- cross-lingual mode conditions on the
             # reference audio alone
             chunks = net.inference_cross_lingual(
-                text, prompt_wav, zero_shot_spk_id=spk_id, stream=False, speed=speed,
+                text, prompt_wav, zero_shot_spk_id=spk_id, stream=False,
+                speed=speed, text_frontend=tf,
             )
 
         pieces = [c["tts_speech"] for c in chunks]
