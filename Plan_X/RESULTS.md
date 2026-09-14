@@ -815,6 +815,109 @@ through a `lcnn_detector` adapter if present and `--rescore` re-scores the
 kept clips without regenerating. Until that runs, every result in this
 document is established only for the RawGAT-ST / AASIST / RawNet2 families.
 
+### 7l. The student has NOT caught the teacher on unseen voices (figure 14)
+
+`probe_gap.py` scores the same mel three ways -- unedited, student x10,
+teacher (60-step PGD) -- for all 15 voices on 3 unseen sentences each.
+
+**This corrects the 97% figure in 7h.** That was measured on 14 stored mels
+from *training* voices only. Measured properly:
+
+| | soft-min recovery | objective recovery |
+|---|---|---|
+| trained voices (n = 30 clips) | **79%** | 82% |
+| held-out voices (n = 12 clips) | **45%** | 61% |
+
+So on voices the student never trained on it captures **less than half** of
+what the teacher achieves. The earlier conclusion that "the student has caught
+its teacher, so more data cannot help" was wrong: for unseen speakers, more
+than half the available gain is still unclaimed, and **adding voices to the
+dataset is the strongest remaining lever.**
+
+Recovery is highly voice-specific, and not simply trained-vs-held-out --
+`evelynn` is held out and recovers 96%, while `riven` is a training voice and
+recovers 37%:
+
+| voice | set | base | student | teacher | gain | recovery |
+|---|---|---|---|---|---|---|
+| swain | train | 0.136 | 0.635 | 0.734 | +0.500 | 84% |
+| Ego | train | 0.192 | 0.642 | 0.638 | +0.450 | 101% |
+| mordekaiser | HELD-OUT | 0.105 | 0.501 | 0.722 | +0.396 | 64% |
+| tahmkench | train | 0.073 | 0.411 | 0.446 | +0.338 | 91% |
+| Joffrey | train | 0.301 | 0.638 | 0.777 | +0.337 | 71% |
+| jhin | train | 0.184 | 0.520 | 0.776 | +0.336 | 57% |
+| Silco | train | 0.259 | 0.573 | 0.585 | +0.313 | 96% |
+| samira | train | 0.266 | 0.391 | 0.392 | +0.125 | 99% |
+| evelynn | HELD-OUT | 0.330 | 0.445 | 0.449 | +0.115 | 96% |
+| Tywin | train | 0.456 | 0.559 | 0.585 | +0.103 | 80% |
+| thresh | HELD-OUT | 0.116 | 0.203 | 0.612 | +0.087 | 18% |
+| riven | train | 0.094 | 0.174 | 0.308 | +0.080 | 37% |
+| david | train | 0.052 | 0.112 | 0.115 | +0.060 | 96% |
+| Tywin_2 | HELD-OUT | 0.091 | 0.115 | 0.249 | +0.024 | 15% |
+| ahmed | train | 0.984 | 1.000 | 1.000 | +0.016 | no headroom |
+
+### Why do some voices work? Mostly not for the reasons section 0 suggested
+
+`analyze_voices.py` measures acoustic properties of each reference.wav and
+correlates them with the gain (Spearman, n = 15).
+
+**A bug found and fixed here.** A hand-rolled rank function gave distinct
+ranks to tied values, and `clip_fraction` -- identically zero for all 15
+voices -- came out at a perfect rho = -1.00. Constants are now rejected and
+ties get average ranks via scipy.
+
+| predictor | soft-min gain | mean-detector gain | recovery vs teacher |
+|---|---|---|---|
+| **teacher's own gain** | **+0.74 (p = 0.003)** | +0.51 (p = 0.05) | -0.37 |
+| f0 spread (IQR) | +0.17 | +0.20 | **+0.76 (p = 0.001)** |
+| reference duration | +0.31 | **+0.69 (p = 0.004)** | +0.28 |
+| reference loudness (RMS) | +0.51 (p = 0.05) | +0.41 | -0.29 |
+| crest factor | -0.51 (p = 0.05) | -0.39 | +0.29 |
+| baseline soft-min | -0.02 | -0.53 (p = 0.04) | +0.38 |
+| **energy above 8 kHz** | +0.31 | +0.21 | +0.27 |
+| reference's own detector score | -0.28 | -0.34 | -0.08 |
+| estimated SNR | +0.08 | -0.12 | +0.28 |
+
+**Multiple comparisons matter here**: 16 predictors x 3 targets = 48 tests, so
+a Bonferroni threshold is p < 0.001 and roughly 2 false positives at p < 0.05
+are expected. Only f0 spread clears the strict bar; the teacher's gain and
+duration are close.
+
+Three readings, in descending confidence:
+
+1. **The student succeeds where the attack itself succeeds** (rho = +0.74).
+   Voice-level difficulty is mostly a property of how attackable that voice's
+   audio is, not of the student.
+2. **Reference "quality" does not explain the gain.** Energy above 8 kHz --
+   the marker of band-limited, processed game voice-over that section 0 blamed
+   for detectability -- has rho = +0.31 (p = 0.26). Estimated SNR, spectral
+   brightness and the reference's own detector score are all flat too.
+   Section 0's observation stands (references *are* part of why baselines
+   differ), but it does **not** predict who benefits from the edit.
+3. **Pitch variability may predict how well the student tracks its teacher**
+   (f0 IQR, rho = +0.76). The four worst-recovering voices (Tywin_2, thresh,
+   riven, jhin) have f0 IQR 42-56 Hz; the best (samira, tahmkench, evelynn,
+   Ego) have 88-101 Hz. A plausible mechanism is that a 5-frame, 0.05 s
+   receptive field generalises better on speech with more local pitch motion,
+   but with n = 15 and 48 tests this is a hypothesis to test, not a finding.
+
+### Which detector actually blocks each voice
+
+Taking the lowest detector score after the edit:
+
+| binding detector | voices |
+|---|---|
+| RawGAT-ST | 8 |
+| RawNet2 | 5 |
+| AASIST | 2 |
+
+AASIST and AASIST-L are at or near 1.0 for almost every voice after the edit;
+**13 of 15 voices are held back by one of the two raw-waveform detectors.**
+Several are extreme -- `Tywin_2` and `david` sit at RawNet2 = 0.00 while their
+AASIST scores are 0.99. Effort spent on the two graph-attention detectors is
+now wasted, which makes re-weighting the objective toward RawNet2 and
+RawGAT-ST the clearest cheap experiment available.
+
 ### Honest limits
 
 - Four iterations recover ~76% of PGD's gain on held-out sentences, not all
