@@ -918,6 +918,91 @@ AASIST scores are 0.99. Effort spent on the two graph-attention detectors is
 now wasted, which makes re-weighting the objective toward RawNet2 and
 RawGAT-ST the clearest cheap experiment available.
 
+### 7m. The objective was measured in the wrong space all along (figures 15, 16)
+
+Section 7l left one question: why does soft-min stall on some voices even for
+the teacher? `probe_objective.py` swept six probability-space objectives --
+sharper soft-min, capped, hinge, reweighted -- and every one returned an
+**identical** RawNet2 score of 0.292. That is not a weighting problem.
+
+Measuring the gradient directly on `david_t00` explains it:
+
+| detector | P(human) | logit margin | gradient w.r.t. mel |
+|---|---|---|---|
+| AASIST | 0.001 | -6.7 | 3.8e-04 |
+| AASIST-L | 0.003 | -5.8 | 1.1e-03 |
+| **RawNet2** | **9e-06** | -11.6 | **6.4e-08** |
+| **RawGAT-ST** | **1.6e-06** | -13.4 | **1.7e-07** |
+
+The two detectors that block 13 of 15 voices are saturated, and their
+gradient is ~5,000x smaller than AASIST's. **PGD was pushing against a wall on
+exactly the detectors that decide soft-min.** Every result in sections 2-7l --
+the teacher's "ceiling", the 45%/79% recovery, the conclusion that further
+training was not worth the compute -- was measured against a teacher crippled
+this way.
+
+The fix is standard for saturated classifiers: optimise the pre-softmax logit
+margin (Carlini & Wagner 2017). At P = 1e-6 the margin is -11.6 and still
+moves linearly.
+
+**Teacher, before and after** (`--objective margin --margin-mode softmin`):
+
+| clips | probability objective | margin objective |
+|---|---|---|
+| `david` (hardest) | 0.115 | **0.989 - 0.996** |
+| median | 0.676 | **0.9998** (all four detectors 1.000) |
+| full 268-target dataset | 0.574 | **0.9949**, >= 0.9 on 99% of targets |
+
+RawNet2 goes from 0.0000 to 0.995 on the voice where it had never moved.
+
+### 7n. The student cannot yet spend that gain cheaply
+
+268 targets were re-collected on **all 15 voices** with the margin objective,
+storing similarity *and* WER per target so damaging edits can be filtered
+(43 dropped for similarity, 23 for WER, 202 kept).
+
+**Voice conditioning did nothing.** A FiLM speaker embedding (CAM++, 192-d,
+zero-initialised so it starts identical to the unconditioned net) recovered
+25.3% against 25.2% unconditioned; a wider net gave 25.3%. Hypothesis
+rejected -- one shared model is sufficient, per-voice adaptation is not the
+missing piece.
+
+**A warning sign:** the fixed-average-edit control now recovers **+34.5%**,
+*more than the trained network's 25%*. On the probability dataset that control
+was -5.4% (section 7). Margin-space solutions evidently share a strong
+universal component that the network is not capturing.
+
+Applied repeatedly, the new model does climb -- but each pass costs audio
+quality. On all 15 voices with unseen sentences:
+
+| model | soft-min | similarity | WER | PESQ change | voices >= 0.5 |
+|---|---|---|---|---|---|
+| unedited | 0.276 | 0.819 | 3.6% | -- | 1/15 |
+| previous model x10 | 0.489 | 0.823 | 4.8% | -0.28 | 6/15 |
+| **margin model x4** | 0.463 | 0.824 | 3.9% | **-0.18** | 6/15 |
+| **margin model x14** | **0.800** | 0.819 | 4.8% | **-0.85** | **14/15** |
+
+At 14 passes soft-min nearly triples (+0.523, t = +14.84) with **similarity
+unchanged to four decimal places** (t = -0.00) and WER inside tolerance -- but
+PESQ falls 0.85, far outside a 0.30 budget. Per detector at that setting:
+AASIST 0.85, AASIST-L 0.91, RawNet2 0.89, RawGAT-ST 0.79.
+
+**Within the quality budget the new model does not beat the old one**
+(0.463 vs 0.489). What it buys is efficiency and headroom:
+
+| | soft-min gained per PESQ point |
+|---|---|
+| previous model x10 | 0.76 |
+| **margin model x4** | **1.04** |
+| margin model x14 | 0.62 |
+
+So the honest summary of this work: **the teacher's ceiling was raised from
+0.574 to 0.995, and the student can reach 0.800 / 14-of-15 voices, but only by
+spending audio quality the brief does not allow.** Closing that gap is a
+distillation problem, not an attack problem -- and the constant-edit control
+beating the network says where to start: initialise at the average edit and
+learn the residual, which needs no new collection.
+
 ### Honest limits
 
 - Four iterations recover ~76% of PGD's gain on held-out sentences, not all

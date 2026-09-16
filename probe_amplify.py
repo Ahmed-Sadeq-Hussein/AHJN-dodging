@@ -44,7 +44,8 @@ DATA_ROOT = RESULTS_ROOT / "rl_runs" / "pgd_dataset"
 RL_RUNS = RESULTS_ROOT / "rl_runs"
 
 
-def apply_policy(net, mel, hift_call, device, k, w, scale=1.0, iters=1):
+def apply_policy(net, mel, hift_call, device, k, w, scale=1.0, iters=1,
+                 space="prob", cap=4.0):
     """Apply the distilled edit `iters` times, each scaled by `scale`.
 
     The gradient hint is recomputed on the current (already edited) mel at
@@ -54,7 +55,8 @@ def apply_policy(net, mel, hift_call, device, k, w, scale=1.0, iters=1):
     cur = mel
     total = torch.zeros_like(mel)
     for _ in range(iters):
-        hint = diffscore.mel_gradient_hint(cur, hift_call, device, k=k, softmin_weight=w)
+        hint = diffscore.mel_gradient_hint(cur, hift_call, device, k=k,
+                                           softmin_weight=w, space=space, cap=cap)
         with torch.no_grad():
             d = scale * net.max_delta * torch.tanh(net(cur, hint))
         total = total + d
@@ -80,6 +82,8 @@ def main() -> int:
     ap.add_argument("--iters", default="1,2,3")
     ap.add_argument("--softmin-k", type=float, default=8.0)
     ap.add_argument("--softmin-weight", type=float, default=0.5)
+    ap.add_argument("--data", default=None,
+                    help="dataset directory (defaults to the original one)")
     ap.add_argument("--device", default=None)
     args = ap.parse_args()
 
@@ -91,10 +95,15 @@ def main() -> int:
                       map_location="cpu", weights_only=False)
     net, kind, _ = build_policy(blob, device, args)
     net.eval()
-    print(f"{args.run}/{args.checkpoint}  iteration {blob.get('iteration')}  {kind}")
+    ck = blob.get("args", {})
+    space = ck.get("objective", "prob")
+    cap = ck.get("margin_cap", 4.0)
+    print(f"{args.run}/{args.checkpoint}  iteration {blob.get('iteration')}  {kind}"
+          f"  [{space} hint]")
 
+    data_dir = Path(args.data) if args.data else DATA_ROOT
     items = []
-    for f in sorted(DATA_ROOT.glob("*.pt")):
+    for f in sorted(data_dir.glob("*.pt")):
         d = torch.load(f, map_location="cpu", weights_only=False)
         items.append(d)
     max_ti = max(d["text_idx"] for d in items)
@@ -126,9 +135,11 @@ def main() -> int:
         for n in iters:
             objs, sms, mags = [], [], []
             for mel, d in zip(mels, val):
+                if net.spk_dim:
+                    net.set_speaker(d["spk_emb"])
                 edited, total = apply_policy(net, mel, hift_call, device,
                                              args.softmin_k, args.softmin_weight,
-                                             scale=s, iters=n)
+                                             scale=s, iters=n, space=space, cap=cap)
                 o, sm = score(edited, hift_call, device,
                               args.softmin_k, args.softmin_weight)
                 objs.append(o); sms.append(sm)

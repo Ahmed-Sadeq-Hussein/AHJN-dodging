@@ -54,13 +54,30 @@ from train_ppo_mel import load_voice
 DATA_ROOT = RESULTS_ROOT / "rl_runs" / "pgd_dataset"
 
 
+def objective_value(wav24, device, space, names, k, softmin_weight, cap,
+                    margin_mode="softmin", margin_k=1.0):
+    """The quantity PGD ascends, in probability or logit-margin space."""
+    if space == "margin":
+        return diffscore.margin_objective(
+            diffscore.detector_margins(wav24, device, names=names), cap=cap,
+            mode=margin_mode, k=margin_k)
+    return diffscore.detector_objective(
+        diffscore.detector_scores(wav24, device, names=names),
+        k=k, softmin_weight=softmin_weight)
+
+
 def pgd_solve(mel, hift_call, device, steps, max_delta, lr, k, softmin_weight,
-              names=None):
+              names=None, space="prob", cap=4.0, margin_mode="softmin",
+              margin_k=1.0):
     """Ascend the detector objective w.r.t. a bounded mel residual.
 
     The bound is structural rather than a projection: delta = max_delta *
     tanh(raw), so every iterate is feasible and Adam never has to be clipped
     back onto the constraint set.
+
+    space="margin" ascends capped logit margins instead of probabilities --
+    on hard clips the blocking detectors are saturated at P ~ 1e-6 and the
+    probability gradient has effectively vanished (see diffscore).
     """
     raw = torch.zeros_like(mel, requires_grad=True)
     opt = torch.optim.Adam([raw], lr=lr)
@@ -70,8 +87,8 @@ def pgd_solve(mel, hift_call, device, steps, max_delta, lr, k, softmin_weight,
             opt.zero_grad()
             delta = max_delta * torch.tanh(raw)
             wav, _ = hift_call(mel + delta)
-            sc = diffscore.detector_scores(wav.squeeze(0), device, names=names)
-            obj = diffscore.detector_objective(sc, k=k, softmin_weight=softmin_weight)
+            obj = objective_value(wav.squeeze(0), device, space, names,
+                                  k, softmin_weight, cap, margin_mode, margin_k)
             (-obj).backward()
             opt.step()
             traj.append(float(obj))
@@ -97,6 +114,20 @@ def main() -> int:
                          "(leave-one-detector-out)")
     ap.add_argument("--softmin-k", type=float, default=8.0)
     ap.add_argument("--softmin-weight", type=float, default=0.5)
+    ap.add_argument("--objective", choices=("prob", "margin"), default="prob",
+                    help="prob: 0.5 soft-min + 0.5 mean of P(human), the space "
+                         "every earlier dataset used. margin: capped logit "
+                         "margins, which still carry gradient where a detector "
+                         "is saturated")
+    ap.add_argument("--margin-cap", type=float, default=4.0)
+    ap.add_argument("--margin-mode", choices=("softmin", "capped"),
+                    default="softmin",
+                    help="softmin drives the WORST margin up and reached "
+                         "soft-min 0.9998 on median clips; capped stops each "
+                         "detector at the cap")
+    ap.add_argument("--measure-wer", action="store_true",
+                    help="transcribe the unedited and edited audio so targets "
+                         "that hurt intelligibility can be filtered at training")
     ap.add_argument("--max-hours", type=float, default=3.5)
     ap.add_argument("--device", default=None)
     ap.add_argument("--seed", type=int, default=11)
@@ -113,6 +144,10 @@ def main() -> int:
         print(f"unknown detector(s): {bad}; expected {all_names}")
         return 1
     voices = args.voices or TRAIN_VOICES
+    if voices == ["all"]:
+        from env_config import VOICE_DATA_ROOT
+        voices = sorted(p.name for p in VOICE_DATA_ROOT.iterdir()
+                        if p.is_dir() and (p / "reference.wav").is_file())
     texts = TRAIN_TEXTS[:args.texts] if args.texts else TRAIN_TEXTS
     if args.breathify:
         import prosody
@@ -127,6 +162,8 @@ def main() -> int:
     if args.breathify:
         print(f"style  : breathified -- e.g. {texts[0]!r}")
     print(f"budget : {args.max_hours} h")
+    print(f"objective: {args.objective}"
+          + (f" (cap {args.margin_cap})" if args.objective == "margin" else ""))
     print(f"optimise against : {opt_names}")
     if held_names:
         print(f"HELD OUT         : {held_names}  (scored for reporting, never "
@@ -187,27 +224,38 @@ def main() -> int:
             hint = diffscore.mel_gradient_hint(mel, hift_call, device,
                                                k=args.softmin_k,
                                                softmin_weight=args.softmin_weight,
-                                               names=opt_names)
+                                               names=opt_names,
+                                               space=args.objective,
+                                               cap=args.margin_cap,
+                                               margin_mode=args.margin_mode)
 
             with torch.no_grad(), diffscore.differentiable():
                 w0, _ = hift_call(mel)
                 s0_all = diffscore.detector_scores(w0.squeeze(0), device)
+                m0_all = diffscore.detector_margins(w0.squeeze(0), device)
                 s0 = {n: s0_all[n] for n in opt_names}
-                obj0 = float(diffscore.detector_objective(
-                    s0, k=args.softmin_k, softmin_weight=args.softmin_weight))
+                obj0 = float(objective_value(w0.squeeze(0), device, args.objective,
+                                             opt_names, args.softmin_k,
+                                             args.softmin_weight, args.margin_cap,
+                                             args.margin_mode))
                 sm0 = float(diffscore.soft_min(list(s0.values()), k=args.softmin_k))
 
             delta, traj = pgd_solve(mel, hift_call, device, args.steps,
                                     args.max_delta, args.lr,
                                     args.softmin_k, args.softmin_weight,
-                                    names=opt_names)
+                                    names=opt_names, space=args.objective,
+                                    cap=args.margin_cap,
+                                    margin_mode=args.margin_mode)
 
             with torch.no_grad(), diffscore.differentiable():
                 w1, _ = hift_call(mel + delta)
                 s1_all = diffscore.detector_scores(w1.squeeze(0), device)
+                m1_all = diffscore.detector_margins(w1.squeeze(0), device)
                 s1 = {n: s1_all[n] for n in opt_names}
-                obj1 = float(diffscore.detector_objective(
-                    s1, k=args.softmin_k, softmin_weight=args.softmin_weight))
+                obj1 = float(objective_value(w1.squeeze(0), device, args.objective,
+                                             opt_names, args.softmin_k,
+                                             args.softmin_weight, args.margin_cap,
+                                             args.margin_mode))
                 sm1 = float(diffscore.soft_min(list(s1.values()), k=args.softmin_k))
 
             # similarity of the PGD result, so bad targets can be filtered
@@ -217,6 +265,17 @@ def main() -> int:
             ref_emb = Tester.speaker_embedding(ref)
             sim0 = float(np.dot(Tester.speaker_embedding(tmp), ref_emb))
             sim1 = float(np.dot(Tester.speaker_embedding(adv), ref_emb))
+
+            # WER is the third target the brief asks for, and until now it was
+            # only ever checked at evaluation. Measuring it per target lets
+            # distillation drop edits that hurt intelligibility instead of
+            # discovering the damage afterwards.
+            wer0 = wer1 = None
+            if args.measure_wer:
+                spoken = cloners.strip_markup(text)
+                wer0 = Tester.wer(spoken, Tester.transcribe(tmp, "base", device))[0]
+                wer1 = Tester.wer(spoken, Tester.transcribe(adv, "base", device))[0]
+
             tmp.unlink(missing_ok=True)
             adv.unlink(missing_ok=True)
 
@@ -224,10 +283,16 @@ def main() -> int:
                         "mel": mel.squeeze(0).half().cpu(),
                         "hint": hint.squeeze(0).half().cpu(),
                         "delta": delta.squeeze(0).half().cpu(),
+                        "spk_emb": torch.tensor(ref_emb, dtype=torch.float32),
+                        "objective": args.objective, "margin_cap": args.margin_cap,
+                        "margin_mode": args.margin_mode,
+                        "wer_before": wer0, "wer_after": wer1,
                         "obj_before": obj0, "obj_after": obj1,
                         "detectors": opt_names, "held_out": held_names,
                         "per_det_before": {n: float(v) for n, v in s0_all.items()},
                         "per_det_after": {n: float(v) for n, v in s1_all.items()},
+                        "margin_before": {n: float(v) for n, v in m0_all.items()},
+                        "margin_after": {n: float(v) for n, v in m1_all.items()},
                         "softmin_before": sm0, "softmin_after": sm1,
                         "sim_before": sim0, "sim_after": sim1,
                         "delta_abs": float(delta.abs().mean()),
@@ -246,6 +311,8 @@ def main() -> int:
                     "per_det_before": {n: float(v) for n, v in s0_all.items()},
                     "per_det_after": {n: float(v) for n, v in s1_all.items()},
                     "sim_before": sim0, "sim_after": sim1,
+                    "wer_before": wer0, "wer_after": wer1,
+                    "objective": args.objective,
                     "delta_abs": float(delta.abs().mean()),
                     "frames": int(mel.shape[-1]), "seconds": el}) + "\n")
             print(f"  [{done:>3}] {key:<20} softmin {sm0:.3f} -> {sm1:.3f}  "

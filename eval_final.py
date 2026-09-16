@@ -57,7 +57,7 @@ class AmplifiedAdapter(torch.nn.Module):
     """
 
     def __init__(self, inner, hift_call, device, k, w, scale=1.0, iters=1,
-                 names=None):
+                 names=None, space="prob", cap=4.0):
         super().__init__()
         self.inner = inner
         self.max_delta = inner.max_delta
@@ -70,17 +70,27 @@ class AmplifiedAdapter(torch.nn.Module):
         # so passing the full set here would quietly re-introduce it and make
         # the holdout meaningless.
         self.names = names
+        # a model trained on margin-space targets needs a margin-space hint;
+        # feeding it the probability hint would hand it ~zero signal on
+        # exactly the saturated detectors it was trained to move
+        self.space, self.cap = space, cap
 
     def sample(self, mel, deterministic=False):
         cur, total = mel, torch.zeros_like(mel)
         for _ in range(self.iters):
             g = diffscore.mel_gradient_hint(cur, self.hift_call, self.device,
                                             k=self.k, softmin_weight=self.w,
-                                            names=self.names)
+                                            names=self.names, space=self.space,
+                                            cap=self.cap)
             d = self.scale * self.inner.max_delta * torch.tanh(self.inner(cur, g))
             total = total + d
             cur = mel + total
         return total, torch.zeros(mel.shape[0], device=mel.device), total
+
+    def set_speaker(self, emb):
+        """Voice-conditioned models need the speaker fixed before generating."""
+        if getattr(self.inner, "spk_dim", 0):
+            self.inner.set_speaker(emb)
 
     def to(self, *a, **kw):
         self.inner.to(*a, **kw)
@@ -145,9 +155,11 @@ def main() -> int:
         arms[tag]["kind"] = kind
         if tag == "distilled" and (args.edit_scale != 1.0 or args.edit_iters != 1):
             ck_names = arms[tag]["blob"].get("args", {}).get("detectors")
+            ck = arms[tag]["blob"].get("args", {})
             arms[tag]["adapter"] = AmplifiedAdapter(
                 net, hift_call, device, args.softmin_k, args.softmin_weight,
-                scale=args.edit_scale, iters=args.edit_iters, names=ck_names)
+                scale=args.edit_scale, iters=args.edit_iters, names=ck_names,
+                space=ck.get("objective", "prob"), cap=ck.get("margin_cap", 4.0))
             print(f"{tag:<10} amplified: scale {args.edit_scale}, "
                   f"iters {args.edit_iters}"
                   + (f", hint restricted to {ck_names}" if ck_names else ""))

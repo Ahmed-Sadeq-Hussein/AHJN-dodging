@@ -47,7 +47,8 @@ class GradInformedActor(nn.Module):
 
     def __init__(self, hidden: int = 96, max_delta: float = 0.6,
                  init_log_std: float = -2.0, min_log_std: float = -3.0,
-                 use_grad_hint: bool = True, dilations=(1, 1, 1)):
+                 use_grad_hint: bool = True, dilations=(1, 1, 1),
+                 spk_dim: int = 0):
         super().__init__()
         self.max_delta = max_delta
         self.min_log_std = min_log_std
@@ -74,6 +75,26 @@ class GradInformedActor(nn.Module):
         nn.init.zeros_(self.mean_head.bias)
         self.log_std = nn.Parameter(torch.full((MEL_CHANNELS,), init_log_std))
 
+        # Optional voice conditioning. Section 7l found teacher recovery ranging
+        # from 15% to 101% by voice while the network never sees which voice it
+        # is editing. A speaker embedding (CAM++, 192-d, the same one CosyVoice2
+        # conditions on) produces a per-channel scale and shift (FiLM) on the
+        # trunk output. Zero-initialised, so a conditioned model starts out
+        # computing exactly what the unconditioned one does; spk_dim = 0 adds no
+        # modules, so every existing checkpoint loads unchanged.
+        self.spk_dim = spk_dim
+        if spk_dim:
+            self.film = nn.Linear(spk_dim, 2 * hidden)
+            nn.init.zeros_(self.film.weight)
+            nn.init.zeros_(self.film.bias)
+            self.register_buffer("spk_emb", torch.zeros(spk_dim), persistent=False)
+
+    def set_speaker(self, emb) -> None:
+        """Fix the voice used when forward() is called without `spk`."""
+        if self.spk_dim:
+            self.spk_emb = torch.as_tensor(emb, dtype=self.film.weight.dtype,
+                                           device=self.film.weight.device).flatten()
+
     def _inp(self, mel, grad):
         if not self.use_grad_hint:
             return mel
@@ -81,8 +102,14 @@ class GradInformedActor(nn.Module):
             grad = torch.zeros_like(mel)
         return torch.cat([mel, grad], dim=1)
 
-    def forward(self, mel, grad=None):
-        return self.mean_head(self.trunk(self._inp(mel, grad)))
+    def forward(self, mel, grad=None, spk=None):
+        h = self.trunk(self._inp(mel, grad))
+        if self.spk_dim:
+            if spk is None:
+                spk = self.spk_emb.unsqueeze(0).expand(mel.shape[0], -1)
+            gamma, beta = self.film(spk).chunk(2, dim=1)
+            h = h * (1.0 + gamma.unsqueeze(-1)) + beta.unsqueeze(-1)
+        return self.mean_head(h)
 
     def sample(self, mel, grad=None, deterministic: bool = False):
         """-> (delta, log_prob, mean_delta); log_prob is per-element mean."""

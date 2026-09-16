@@ -86,7 +86,7 @@ class PGDDataset:
         return len(self.items)
 
     def batch(self, idx, device, rng):
-        mels, hints, deltas, masks = [], [], [], []
+        mels, hints, deltas, masks, spks = [], [], [], [], []
         W = self.window
         for i in idx:
             d = self.items[i]
@@ -103,8 +103,10 @@ class PGDDataset:
                 hint = F.pad(hint, (0, pad))
                 dl = F.pad(dl, (0, pad))
             mels.append(mel); hints.append(hint); deltas.append(dl); masks.append(m)
+            spks.append(d.get("spk_emb", torch.zeros(192)).float())
         return (torch.stack(mels).to(device), torch.stack(hints).to(device),
-                torch.stack(deltas).to(device), torch.stack(masks).to(device))
+                torch.stack(deltas).to(device), torch.stack(masks).to(device),
+                torch.stack(spks).to(device))
 
 
 def masked_stats(pred, targ, mask):
@@ -123,7 +125,17 @@ def masked_stats(pred, targ, mask):
 # the metric that actually decides the question
 # --------------------------------------------------------------------------
 
-def objective_eval(net, items, hift_call, device, k, w, limit=8, names=None):
+def _obj_value(wav24, device, names, k, w, space, cap):
+    if space == "margin":
+        return float(diffscore.margin_objective(
+            diffscore.detector_margins(wav24, device, names=names), cap=cap))
+    return float(diffscore.detector_objective(
+        diffscore.detector_scores(wav24, device, names=names), k=k,
+        softmin_weight=w))
+
+
+def objective_eval(net, items, hift_call, device, k, w, limit=8, names=None,
+                   space="prob", cap=4.0):
     """Push the PREDICTED edit through HiFT + detectors on held-out mels.
 
     Returns the mean recovered fraction of PGD's own gain:
@@ -138,11 +150,13 @@ def objective_eval(net, items, hift_call, device, k, w, limit=8, names=None):
         for d in items[:limit]:
             mel = d["mel"].float().unsqueeze(0).to(device)
             hint = d["hint"].float().unsqueeze(0).to(device)
+            if net.spk_dim:
+                net.set_speaker(d["spk_emb"])
             delta = net.max_delta * torch.tanh(net(mel, hint))
             with diffscore.differentiable():
                 wav, _ = hift_call(mel + delta)
                 sc = diffscore.detector_scores(wav.squeeze(0), device, names=names)
-                obj = float(diffscore.detector_objective(sc, k=k, softmin_weight=w))
+                obj = _obj_value(wav.squeeze(0), device, names, k, w, space, cap)
                 sm = float(diffscore.soft_min(list(sc.values()), k=k))
             gain_pgd = d["obj_after"] - d["obj_before"]
             gain_net = obj - d["obj_before"]
@@ -212,6 +226,17 @@ def main() -> int:
     ap.add_argument("--max-hours", type=float, default=2.0)
     ap.add_argument("--eval-every", type=int, default=10)
     ap.add_argument("--eval-limit", type=int, default=8)
+    ap.add_argument("--objective", choices=("prob", "margin"), default=None,
+                    help="scoring space for the objective eval; defaults to "
+                         "whatever the dataset was collected with")
+    ap.add_argument("--margin-cap", type=float, default=4.0)
+    ap.add_argument("--spk-cond", action="store_true",
+                    help="condition the actor on the CAM++ speaker embedding "
+                         "(FiLM). Recovery ranges 15-101%% by voice while the "
+                         "network cannot currently tell voices apart")
+    ap.add_argument("--max-wer-cost", type=float, default=0.05,
+                    help="drop targets whose WER rose by more than this "
+                         "(needs a dataset collected with --measure-wer)")
     ap.add_argument("--detectors", default=None,
                     help="subset the objective eval scores against; must match "
                          "what the targets were collected with")
@@ -223,6 +248,7 @@ def main() -> int:
 
     device = args.device or ("cuda" if torch.cuda.is_available() else "cpu")
     dilations = tuple(int(x) for x in args.dilations.split(","))
+    spk_dim = 192 if args.spk_cond else 0
     opt_names = ([n.strip() for n in args.detectors.split(",")]
                  if args.detectors else None)
     data_dir = Path(args.data) if args.data else DATA_ROOT
@@ -244,17 +270,23 @@ def main() -> int:
     # 0.824 -> 0.664. Regressing onto that teaches the network to make a large
     # damaging edit on exactly the inputs that needed no edit. Filter such
     # targets out rather than letting them define the identity case.
-    keep, dropped = [], {"no_gain": 0, "sim_cost": 0}
+    keep, dropped = [], {"no_gain": 0, "sim_cost": 0, "wer_cost": 0}
     for d in ds.items:
+        wer_cost = ((d["wer_after"] - d["wer_before"])
+                    if d.get("wer_after") is not None
+                    and d.get("wer_before") is not None else 0.0)
         if d["obj_after"] - d["obj_before"] < args.min_gain:
             dropped["no_gain"] += 1
         elif d["sim_before"] - d["sim_after"] > args.max_sim_cost:
             dropped["sim_cost"] += 1
+        elif wer_cost > args.max_wer_cost:
+            dropped["wer_cost"] += 1
         else:
             keep.append(d)
     print(f"kept {len(keep)}/{len(ds.items)} targets "
           f"(dropped {dropped['no_gain']} with gain < {args.min_gain}, "
-          f"{dropped['sim_cost']} costing > {args.max_sim_cost} similarity)")
+          f"{dropped['sim_cost']} costing > {args.max_sim_cost} similarity, "
+          f"{dropped['wer_cost']} costing > {args.max_wer_cost} WER)")
     if not keep:
         print("nothing usable left after filtering")
         return 1
@@ -276,8 +308,17 @@ def main() -> int:
           f"mean softmin gain {sms.mean():+.4f}")
     print(f"            |delta| mean {np.mean([d['delta_abs'] for d in ds.items]):.4f}")
 
+    # the objective space must match how the targets were collected: a
+    # margin-collected obj_before/obj_after cannot be compared against a
+    # probability-space evaluation
+    space = args.objective or ds.items[0].get("objective", "prob")
+    cap = ds.items[0].get("margin_cap", args.margin_cap)
+    print(f"objective space: {space}" + (f" (cap {cap})" if space == "margin" else "")
+          + (f"   voice-conditioned (spk_dim {spk_dim})" if spk_dim else ""))
+
     net = GradInformedActor(hidden=args.hidden, max_delta=args.max_delta,
-                            use_grad_hint=True, dilations=dilations).to(device)
+                            use_grad_hint=True, dilations=dilations,
+                            spk_dim=spk_dim).to(device)
     rf = 1 + sum(4 * d for d in dilations)
     print(f"actor: {sum(p.numel() for p in net.parameters()):,} params, "
           f"receptive field {rf} frames ({rf * 256 / 24000:.2f} s)")
@@ -306,7 +347,8 @@ def main() -> int:
     (run_dir / "config.json").write_text(json.dumps(vars(args), indent=2), encoding="utf8")
     log_path = run_dir / "train_log.jsonl"
 
-    ckpt_args = {"detectors": opt_names,
+    ckpt_args = {"detectors": opt_names, "spk_dim": spk_dim,
+                 "objective": space, "margin_cap": cap,
                  "max_delta": args.max_delta, "hidden": args.hidden,
                  "dilations": list(dilations), "no_grad_hint": False,
                  "init_log_std": -4.5, "min_log_std": -6.0,
@@ -337,10 +379,10 @@ def main() -> int:
             idx = perm[s * args.batch:(s + 1) * args.batch]
             if len(idx) == 0:
                 continue
-            mel, hint, targ, mask = ds.batch(idx, device, rng)
+            mel, hint, targ, mask, spk = ds.batch(idx, device, rng)
             if args.input_noise > 0:
                 mel = mel + args.input_noise * torch.randn_like(mel)
-            pred = net.max_delta * torch.tanh(net(mel, hint))
+            pred = net.max_delta * torch.tanh(net(mel, hint, spk))
             mse, cos, ratio = masked_stats(pred, targ, mask)
             opt.zero_grad()
             mse.backward()
@@ -352,15 +394,16 @@ def main() -> int:
 
         with torch.no_grad():
             vidx = np.array(val_idx)
-            mel, hint, targ, mask = ds.batch(vidx, device, rng)
-            pred = net.max_delta * torch.tanh(net(mel, hint))
+            mel, hint, targ, mask, spk = ds.batch(vidx, device, rng)
+            pred = net.max_delta * torch.tanh(net(mel, hint, spk))
             vmse, vcos, vratio = masked_stats(pred, targ, mask)
 
         rec = None
         if epoch % args.eval_every == 0:
             rec, absolutes = objective_eval(net, val_items, hift_call, device,
                                             args.softmin_k, args.softmin_weight,
-                                            args.eval_limit, names=opt_names)
+                                            args.eval_limit, names=opt_names,
+                                            space=space, cap=cap)
             sm_net = float(np.mean([a["softmin_net"] for a in absolutes]))
             sm_base = float(np.mean([a["softmin_base"] for a in absolutes]))
             sm_pgd = float(np.mean([a["softmin_pgd"] for a in absolutes]))
@@ -393,7 +436,8 @@ def main() -> int:
 
     rec, absolutes = objective_eval(net, val_items, hift_call, device,
                                     args.softmin_k, args.softmin_weight,
-                                    len(val_items), names=opt_names)
+                                    len(val_items), names=opt_names,
+                                    space=space, cap=cap)
     print("\n" + "=" * 78)
     print("FINAL, on held-out SENTENCES (voices were seen during distillation)")
     print("=" * 78)

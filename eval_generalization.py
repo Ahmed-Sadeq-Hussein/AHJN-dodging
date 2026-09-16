@@ -84,6 +84,7 @@ def build_policy(blob, device, args):
             min_log_std=targs.get("min_log_std", -6.0),
             use_grad_hint=not targs.get("no_grad_hint", False),
             dilations=tuple(targs.get("dilations", (1, 1, 1))),
+            spk_dim=targs.get("spk_dim", 0),
         ).to(device)
         net.load_state_dict(blob["actor"])
         if blob.get("distilled"):

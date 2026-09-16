@@ -131,9 +131,123 @@ def detector_objective(scores: dict[str, torch.Tensor], k: float = 8.0,
     return softmin_weight * sm + (1.0 - softmin_weight) * mean
 
 
+def detector_margins(wav24: torch.Tensor, device, names=None,
+                     max_windows: int | None = None) -> dict[str, torch.Tensor]:
+    """Logit margin (bonafide - spoof) per detector, instead of P(human).
+
+    THE reason soft-min stalls on hard clips. On david_t00 the two detectors
+    that block that voice report P(human) = 9e-06 and 1.6e-06; their softmax
+    is completely flat there, and the gradient w.r.t. the mel is ~6e-08 and
+    ~1.7e-07 -- roughly five thousand times smaller than AASIST's. PGD gets no
+    signal at all, which is why every objective in the sweep returned an
+    identical RawNet2 score of 0.292: it was never a weighting problem, it was
+    a vanishing gradient.
+
+    The margin is the pre-softmax difference. At P = 1e-6 it sits at -11.6 and
+    still moves linearly, so gradient descent can work on it. This is the
+    standard fix for saturated classifiers in adversarial attacks (Carlini &
+    Wagner 2017, arXiv:1608.04644 §V-A).
+
+    For 'log_softmax' detectors the difference of log-probabilities equals the
+    difference of logits, so the same expression is correct for both spec
+    types.
+    """
+    import torchaudio.functional as AF
+
+    names = names or list(det.MODEL_ORDER)
+    wav16 = AF.resample(wav24, SAMPLE_RATE_GEN, SAMPLE_RATE_DET)
+    n = wav16.shape[-1]
+    NB = det.NB_SAMP
+    if n < NB:
+        reps = int(NB / n) + 1
+        wins = wav16.repeat(reps)[:NB].unsqueeze(0)
+    else:
+        starts = list(range(0, n - NB + 1, NB))
+        if starts[-1] + NB < n:
+            starts.append(n - NB)
+        wins = torch.stack([wav16[s:s + NB] for s in starts])
+    if max_windows is not None and wins.shape[0] > max_windows:
+        wins = wins[:max_windows]
+
+    out = {}
+    for name in names:
+        spec = det._SPECS[name]
+        raw = spec.unpack(det.get_model(name, device)(wins, **spec.forward_kwargs))
+        out[name] = (raw[:, 1] - raw[:, 0]).mean()
+    return out
+
+
+def margin_objective(margins: dict[str, torch.Tensor], cap: float = 4.0,
+                     mode: str = "capped", k: float = 1.0) -> torch.Tensor:
+    """Objective over logit margins.
+
+    `cap` is where a detector stops earning credit. A margin of +4 is
+    P(human) ~ 0.982, comfortably past any 0.5 threshold, so pushing further
+    wastes edit budget that soft-min will never reward -- the overshoot to
+    0.9997 seen in section 7l.
+
+      capped   mean of min(margin_i, cap): every detector is pulled toward cap
+               and no further
+      softmin  smooth minimum over margins at temperature k (margins are in
+               logit units, so k ~ 1 is the natural scale, not the k = 8 used
+               for probabilities)
+    """
+    vals = torch.stack(list(margins.values()))
+    if mode == "capped":
+        return torch.clamp(vals, max=cap).mean()
+    if mode == "softmin":
+        return -(torch.logsumexp(-k * vals, dim=0) - np.log(len(vals))) / k
+    raise ValueError(f"unknown margin mode {mode!r}")
+
+
+def detector_objective_v2(scores, mode: str = "blend", k: float = 8.0,
+                          softmin_weight: float = 0.5, tau: float = 0.9,
+                          weights=None):
+    """Objectives aimed at the WORST detector rather than the average.
+
+    The default "blend" (0.5 soft-min + 0.5 mean) was chosen in section 4 to
+    stop Design A abandoning detectors that were already passing. It succeeded,
+    and then overshot: after the edit AASIST and AASIST-L sit at ~1.00 on
+    nearly every voice while 13 of 15 are held back by RawNet2 or RawGAT-ST
+    (section 7l). PGD drives AASIST to 0.9997 -- every unit of edit budget
+    spent above ~0.9 buys nothing, because soft-min only ever reports the
+    minimum.
+
+    modes:
+      blend    current: softmin_weight * soft-min(k) + (1-w) * mean
+      softmin  pure soft-min at k (larger k -> closer to a true min)
+      capped   mean of min(s_i, tau) -- a detector stops paying once it clears
+               tau, so the gradient moves to whoever is still behind
+      hinge    -mean(max(0, tau - s_i)^2) -- minimise the squared shortfall;
+               quadratic weighting pushes hardest on the furthest-behind
+      weighted fixed per-detector weights (pass `weights` as a dict)
+
+    `capped` and `hinge` both bound how much a saturated detector can
+    contribute, which is the property the other two lack.
+    """
+    names = list(scores)
+    vals = torch.stack([scores[n] for n in names])
+
+    if mode == "blend":
+        return softmin_weight * soft_min(list(vals), k=k) + (1 - softmin_weight) * vals.mean()
+    if mode == "softmin":
+        return soft_min(list(vals), k=k)
+    if mode == "capped":
+        return torch.clamp(vals, max=tau).mean()
+    if mode == "hinge":
+        return -(torch.clamp(tau - vals, min=0.0) ** 2).mean()
+    if mode == "weighted":
+        w = torch.tensor([float(weights.get(n, 1.0)) for n in names],
+                         device=vals.device, dtype=vals.dtype)
+        return (w * vals).sum() / w.sum()
+    raise ValueError(f"unknown objective mode {mode!r}")
+
+
 def mel_gradient_hint(mel: torch.Tensor, hift_call, device, k: float = 8.0,
                       softmin_weight: float = 0.5, names=None,
-                      max_windows: int | None = 8) -> torch.Tensor:
+                      max_windows: int | None = 8, space: str = "prob",
+                      cap: float = 4.0, margin_mode: str = "softmin",
+                      margin_k: float = 1.0) -> torch.Tensor:
     """d(detector objective) / d(mel) -- the actor's extra input channels.
 
     This is the signal Design A discarded. It is returned detached and
@@ -150,9 +264,18 @@ def mel_gradient_hint(mel: torch.Tensor, hift_call, device, k: float = 8.0,
     m = mel.detach().clone().requires_grad_(True)
     with differentiable():
         wav, _ = hift_call(m)
-        sc = detector_scores(wav.squeeze(0), device, names=names,
-                             max_windows=max_windows)
-        obj = detector_objective(sc, k=k, softmin_weight=softmin_weight)
+        if space == "margin":
+            # the probability-space hint is ~zero exactly where a detector is
+            # saturated (see detector_margins), so a model trained on
+            # margin-space targets must get a margin-space hint at inference
+            obj = margin_objective(detector_margins(wav.squeeze(0), device,
+                                                    names=names,
+                                                    max_windows=max_windows),
+                                   cap=cap, mode=margin_mode, k=margin_k)
+        else:
+            sc = detector_scores(wav.squeeze(0), device, names=names,
+                                 max_windows=max_windows)
+            obj = detector_objective(sc, k=k, softmin_weight=softmin_weight)
         g, = torch.autograd.grad(obj, m)
     rms = g.pow(2).mean().sqrt()
     return (g / (rms + 1e-8)).detach()
