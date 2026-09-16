@@ -230,6 +230,10 @@ def main() -> int:
                     help="scoring space for the objective eval; defaults to "
                          "whatever the dataset was collected with")
     ap.add_argument("--margin-cap", type=float, default=4.0)
+    ap.add_argument("--init-profile", action="store_true",
+                    help="initialise the actor at the mean PGD edit and learn "
+                         "only the residual; that fixed edit alone already "
+                         "recovers 34.5%% on the margin dataset")
     ap.add_argument("--spk-cond", action="store_true",
                     help="condition the actor on the CAM++ speaker embedding "
                          "(FiLM). Recovery ranges 15-101%% by voice while the "
@@ -318,7 +322,8 @@ def main() -> int:
 
     net = GradInformedActor(hidden=args.hidden, max_delta=args.max_delta,
                             use_grad_hint=True, dilations=dilations,
-                            spk_dim=spk_dim).to(device)
+                            spk_dim=spk_dim,
+                            profile_bias=args.init_profile).to(device)
     rf = 1 + sum(4 * d for d in dilations)
     print(f"actor: {sum(p.numel() for p in net.parameters()):,} params, "
           f"receptive field {rf} frames ({rf * 256 / 24000:.2f} s)")
@@ -340,7 +345,12 @@ def main() -> int:
                                    args.eval_limit, names=opt_names)
     print(f"control -- one fixed average edit applied to every utterance "
           f"recovers {const_rec * 100:+.1f}% of PGD's gain "
-          f"(|profile| mean {float(prof.abs().mean()):.4f})\n", flush=True)
+          f"(|profile| mean {float(prof.abs().mean()):.4f})", flush=True)
+    if args.init_profile:
+        net.set_profile(prof)
+        print("actor initialised at that edit; it now learns the residual",
+              flush=True)
+    print(flush=True)
 
     run_dir = RUN_ROOT / f"distill_{args.run_id}"
     run_dir.mkdir(parents=True, exist_ok=True)
@@ -348,6 +358,7 @@ def main() -> int:
     log_path = run_dir / "train_log.jsonl"
 
     ckpt_args = {"detectors": opt_names, "spk_dim": spk_dim,
+                 "profile_bias": bool(args.init_profile),
                  "objective": space, "margin_cap": cap,
                  "max_delta": args.max_delta, "hidden": args.hidden,
                  "dilations": list(dilations), "no_grad_hint": False,

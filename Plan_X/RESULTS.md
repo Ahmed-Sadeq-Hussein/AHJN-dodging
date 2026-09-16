@@ -1003,6 +1003,92 @@ distillation problem, not an attack problem -- and the constant-edit control
 beating the network says where to start: initialise at the average edit and
 learn the residual, which needs no new collection.
 
+### 7o. Two attempts to close the student-teacher gap, both instructive
+
+Section 7n left the teacher at 0.9949 and the student at 0.463 within the
+quality budget, with one clue: the fixed average edit recovered **34.5%** while
+the trained network recovered **25%**.
+
+**Attempt 1 -- start at the average edit and learn the residual.** A per-channel
+pre-tanh bias initialised so the network emits exactly the mean PGD edit
+(verified to 1.9e-09), leaving it only the correction to learn.
+
+| | recovered |
+|---|---|
+| fixed average edit alone | +34.5% |
+| network, no profile init | +25.2% |
+| **network, profile init** | **+24.6%** |
+| network, profile init, lr 3e-5 | +24.9% |
+
+**No effect.** Training pulls the network back to the same solution regardless
+of where it starts. Combined with the control beating the network, that points
+at the training signal rather than the initialisation: MSE against noisy
+per-utterance targets shrinks predictions toward their mean, and the shrunken
+edit has lower MSE but a worse objective. The network was doing exactly what
+it was asked to do.
+
+**Attempt 2 -- stop imitating; optimise the objective directly.** The path
+mel -> HiFT -> detectors is differentiable end to end, which is what makes PGD
+possible in the first place. So the network can be trained on
+
+    loss = -margin_objective(detectors(hift(mel + delta))) + beta * mean(delta^2)
+
+with no targets at all (`train_direct.py`). Design A sampled this objective
+with PPO, Design B with SAC, and distillation approximated it through MSE --
+**nobody had simply backpropagated it into the weights.**
+
+It does beat distillation on the objective, confirming the diagnosis:
+
+| | val soft-min, single pass | \|delta\| |
+|---|---|---|
+| unedited | 0.257 | -- |
+| distilled (the starting point) | 0.332 | 0.019 |
+| direct, beta = 2.0 | **0.383** | 0.063 |
+| direct, beta = 0.5 | **0.412** | 0.132 |
+
+**But it is far less quality-efficient**, measured on 6 voices:
+
+| config | soft-min | d PESQ |
+|---|---|---|
+| margin-distilled x4 | 0.465 | **-0.25** |
+| direct (beta 2.0) x1 | 0.268 | -0.78 |
+| direct (beta 2.0) x4 | 0.567 | -1.89 |
+| direct (beta 20) x1 | 0.255 | -0.89 |
+
+Raising beta from 2 to 20 made PESQ *worse* (-0.78 -> -0.89) while |delta|
+still grew to 0.08. **`mean(delta^2)` is not a proxy for audible damage**: the
+optimiser simply finds loud edits that score well, and penalising their mean
+square does not stop it. A perceptual term -- frequency-weighted, or a
+differentiable quality estimate in the loss -- is what this needs.
+
+**So the best configuration within the quality budget is unchanged**: the
+distilled model, applied 4-10 times. Direct training is the methodologically
+correct route and it is now implemented and working, but it cannot yet be
+spent without damaging the audio.
+
+### 7p. Where this leaves the project
+
+| approach | soft-min (all 15 voices) | d PESQ | inside budget? |
+|---|---|---|---|
+| unedited | 0.276 | -- | -- |
+| Design A (PPO, 4 GPU-h) | worse than unedited | -- | no |
+| Design B (SAC, 12 GPU-h) | no gain | -- | no |
+| distilled, probability objective, x10 | 0.489 | -0.28 | **yes** |
+| distilled, margin objective, x4 | 0.463 | **-0.18** | **yes** |
+| distilled, margin objective, x14 | **0.800** (14/15 voices >= 0.5) | -0.85 | no |
+| direct objective training | 0.268-0.567 | -0.78 to -1.89 | no |
+| PGD teacher (per utterance) | **0.995** | -- | -- |
+
+Three bottlenecks have been found and two are fixed. The objective was being
+measured in a saturated space (fixed, 7m). The training signal was a proxy for
+the wrong thing (diagnosed and bypassed, 7o). What remains is that **every
+route to higher soft-min currently spends audio quality faster than the budget
+allows**, and the loss has no term that knows what "quality" means.
+
+The next step is therefore not more compute on any existing method. It is a
+perceptual term in the direct-training loss, at which point `train_direct.py`
+can be run with a larger network for hours rather than thirty minutes.
+
 ### Honest limits
 
 - Four iterations recover ~76% of PGD's gain on held-out sentences, not all

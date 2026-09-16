@@ -48,7 +48,7 @@ class GradInformedActor(nn.Module):
     def __init__(self, hidden: int = 96, max_delta: float = 0.6,
                  init_log_std: float = -2.0, min_log_std: float = -3.0,
                  use_grad_hint: bool = True, dilations=(1, 1, 1),
-                 spk_dim: int = 0):
+                 spk_dim: int = 0, profile_bias: bool = False):
         super().__init__()
         self.max_delta = max_delta
         self.min_log_std = min_log_std
@@ -75,13 +75,22 @@ class GradInformedActor(nn.Module):
         nn.init.zeros_(self.mean_head.bias)
         self.log_std = nn.Parameter(torch.full((MEL_CHANNELS,), init_log_std))
 
-        # Optional voice conditioning. Section 7l found teacher recovery ranging
-        # from 15% to 101% by voice while the network never sees which voice it
-        # is editing. A speaker embedding (CAM++, 192-d, the same one CosyVoice2
-        # conditions on) produces a per-channel scale and shift (FiLM) on the
-        # trunk output. Zero-initialised, so a conditioned model starts out
-        # computing exactly what the unconditioned one does; spk_dim = 0 adds no
-        # modules, so every existing checkpoint loads unchanged.
+        # A per-channel pre-tanh bias, so the network can be initialised AT a
+        # fixed edit and learn only the residual. On the margin dataset the
+        # average PGD edit applied blind recovers 34.5% of the gain while the
+        # trained network recovers 25% (section 7n) -- the universal component
+        # is real and the regression was not finding it. Starting there makes
+        # that component free and leaves the network the part it is good at.
+        self.profile_bias = profile_bias
+        if profile_bias:
+            self.base_bias = nn.Parameter(torch.zeros(MEL_CHANNELS, 1))
+
+        # Optional voice conditioning: a CAM++ speaker embedding (192-d, the
+        # one CosyVoice2 itself conditions on) produces a per-channel scale and
+        # shift (FiLM) on the trunk output. Zero-initialised, so a conditioned
+        # model starts out computing exactly what the unconditioned one does,
+        # and spk_dim = 0 adds no modules so old checkpoints load unchanged.
+        # Measured on the margin dataset: no benefit (25.3% vs 25.2%).
         self.spk_dim = spk_dim
         if spk_dim:
             self.film = nn.Linear(spk_dim, 2 * hidden)
@@ -102,6 +111,21 @@ class GradInformedActor(nn.Module):
             grad = torch.zeros_like(mel)
         return torch.cat([mel, grad], dim=1)
 
+    def set_profile(self, profile) -> None:
+        """Initialise the bias so the net starts by emitting `profile`.
+
+        delta = max_delta * tanh(pre), so the pre-tanh value that produces the
+        profile is atanh(profile / max_delta); clamped because atanh diverges
+        at the bound.
+        """
+        if not self.profile_bias:
+            return
+        pr = torch.as_tensor(profile, dtype=self.base_bias.dtype,
+                             device=self.base_bias.device).flatten()
+        ratio = (pr / self.max_delta).clamp(-0.999, 0.999)
+        with torch.no_grad():
+            self.base_bias.copy_(torch.atanh(ratio).unsqueeze(-1))
+
     def forward(self, mel, grad=None, spk=None):
         h = self.trunk(self._inp(mel, grad))
         if self.spk_dim:
@@ -109,7 +133,10 @@ class GradInformedActor(nn.Module):
                 spk = self.spk_emb.unsqueeze(0).expand(mel.shape[0], -1)
             gamma, beta = self.film(spk).chunk(2, dim=1)
             h = h * (1.0 + gamma.unsqueeze(-1)) + beta.unsqueeze(-1)
-        return self.mean_head(h)
+        out = self.mean_head(h)
+        if self.profile_bias:
+            out = out + self.base_bias
+        return out
 
     def sample(self, mel, grad=None, deterministic: bool = False):
         """-> (delta, log_prob, mean_delta); log_prob is per-element mean."""
