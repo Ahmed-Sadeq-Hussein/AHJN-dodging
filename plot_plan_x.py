@@ -27,10 +27,10 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from env_config import RESULTS_ROOT
+from env_config import GRAPHS_DIR, RESULTS_ROOT
 
 RL_RUNS = RESULTS_ROOT / "rl_runs"
-PLAN_X = Path(__file__).resolve().parent / "Plan_X"
+PLAN_X = GRAPHS_DIR
 
 # consistent palette across every figure: warm = Design A, cool = Design B
 C_A, C_B, C_REF, C_BAD = "#e76f51", "#2a9d8f", "#264653", "#e9c46a"

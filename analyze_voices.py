@@ -40,10 +40,10 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from env_config import RESULTS_ROOT, VOICE_DATA_ROOT
+from env_config import GRAPHS_DIR, RESULTS_ROOT, VOICE_DATA_ROOT
 
 RL_RUNS = RESULTS_ROOT / "rl_runs"
-PLAN_X = Path(__file__).resolve().parent / "Plan_X"
+PLAN_X = GRAPHS_DIR
 CACHE = RL_RUNS / "voice_features.json"
 SR_TARGET = 24000
 

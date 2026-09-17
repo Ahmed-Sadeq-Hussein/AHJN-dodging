@@ -23,10 +23,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from env_config import RESULTS_ROOT
+from env_config import GRAPHS_DIR, RESULTS_ROOT
 
 RL = RESULTS_ROOT / "rl_runs"
-PLAN_X = Path(__file__).resolve().parent / "Plan_X"
+PLAN_X = GRAPHS_DIR
 C_BASE, C_OLD, C_NEW, C_PGD = "#8a8f98", "#2a9d8f", "#4a5fc1", "#e07a1f"
 
 

@@ -112,6 +112,11 @@ On held-out voices with unseen sentences: mean detector score 0.34 -> 0.69
 | 3. evaluate | `python eval_final.py --distill-run distill_final --edit-iters 10` | ~45 min |
 | 4. figures | `python plot_distill.py --run distill_final --control -0.155` | ~1 min |
 
+All figures live in [`graphs/`](graphs/INDEX.md) — `graphs/INDEX.md` lists what
+each one shows and which section of `Plan_X/RESULTS.md` cites it. Plot scripts
+write there via `env_config.GRAPHS_DIR`; `python collect_graphs.py` also pulls
+in the per-run figures written under `RESULTS_ROOT` and rebuilds the index.
+
 ### Plan_X files
 
 | file | what it does |

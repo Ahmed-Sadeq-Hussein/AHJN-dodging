@@ -1,8 +1,8 @@
 # Plan_X — results and reasoning
 
-What was run, what came out, and why each conclusion follows. Figures are in
-this folder; every number below is reproducible from the scripts named
-against it.
+What was run, what came out, and why each conclusion follows. Every figure
+lives in [`../graphs/`](../graphs/INDEX.md) with an index saying what each one
+shows; every number below is reproducible from the scripts named against it.
 
 Status: complete. Sections 0–6 cover the two RL designs and the audits that
 explain why they failed; section 7 covers the distillation run that worked.

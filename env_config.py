@@ -74,3 +74,10 @@ CAMPPLUS_ONNX      = _optional(
 # `detectors.py --json`. Not required by any script except reward.py, so it's
 # optional here and only raises when reward.py actually tries to use it.
 VOICEFAKE_PYTHON = os.environ.get("VOICEFAKE_PYTHON")
+
+# Every figure this project produces lands here, so they are all in one place
+# and survive independently of whichever script drew them. Lives in the repo
+# (not RESULTS_ROOT) because the figures are small, reviewable, and worth
+# keeping under version control alongside the write-up that cites them.
+GRAPHS_DIR = _optional("GRAPHS_DIR", THIS_DIR / "graphs")
+GRAPHS_DIR.mkdir(parents=True, exist_ok=True)

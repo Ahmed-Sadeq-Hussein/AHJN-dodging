@@ -22,10 +22,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from env_config import RESULTS_ROOT
+from env_config import GRAPHS_DIR, RESULTS_ROOT
 
 RL = RESULTS_ROOT / "rl_runs"
-PLAN_X = Path(__file__).resolve().parent / "Plan_X"
+PLAN_X = GRAPHS_DIR
 
 # (glob, label, colour, marker) -- each file is one (model, pass count) point
 FAMILIES = [

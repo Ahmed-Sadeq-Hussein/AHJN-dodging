@@ -27,9 +27,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from env_config import RESULTS_ROOT
+from env_config import GRAPHS_DIR, RESULTS_ROOT
 
-PLAN_X = Path(__file__).resolve().parent / "Plan_X"
+PLAN_X = GRAPHS_DIR
 JSON = RESULTS_ROOT / "rl_runs" / "ab_voice_eval" / "ab_voice_eval.json"
 
 C_BASE, C_A, C_B = "#8a8f98", "#d1495b", "#2a9d8f"
