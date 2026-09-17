@@ -1089,6 +1089,77 @@ The next step is therefore not more compute on any existing method. It is a
 perceptual term in the direct-training loss, at which point `train_direct.py`
 can be run with a larger network for hours rather than thirty minutes.
 
+### 7q. Making the loss perceptual: three fixes, frontier unmoved (figure 17)
+
+Section 7o ended with direct training working but spending quality far too
+fast, and one diagnosis: `mean(delta^2)` is not a measure of audible damage.
+Three things were fixed here. Each is real; together they did not beat
+distillation inside the quality budget.
+
+**Fix 1 -- the penalty has to be perceptual.** Two replacements
+(`perceptual.py`): a **masking** weight that makes edits cheap under loud
+speech and expensive in near-silence (the approximation of Qin et al. 2019,
+arXiv:1903.10346), and **multi-resolution STFT distance** between the edited
+and unedited waveform, the standard vocoder reconstruction loss (Parallel
+WaveGAN, arXiv:1910.11480) -- computed on the signal that is actually heard.
+
+A trap worth recording: HiFT injects noise, so an unedited/edited pair drawn
+from two separate calls differs by 0.025 peak and **0.059 of STFT distance on
+its own** -- larger than the penalty being measured. Reseeding before each
+vocoder call makes the two passes bit-identical (max diff exactly 0), leaving
+the edit as the only difference.
+
+The effect on quality efficiency is large:
+
+| loss | passes | soft-min | d PESQ | soft-min per PESQ point |
+|---|---|---|---|---|
+| mean(delta^2) | 1 | 0.268 | -0.78 | 0.18 |
+| mean(delta^2) | 4 | 0.567 | -1.89 | 0.23 |
+| **masking** | 1 | 0.278 | **-0.07** | **2.02** |
+| **STFT + masking** | 2 | 0.342 | -0.14 | 1.50 |
+
+**Fix 2 -- capacity helps, reversing the distillation finding.** Section 7
+found smaller networks strictly better (270k -> -0.4%, 21k -> +33.6%). That
+was a statement about overfitting 221 fixed targets, and it does not survive
+the change of objective. Trained directly, a 98k network with a 0.31 s
+receptive field beat the 21k / 0.05 s one: **val soft-min 0.637 vs 0.534**.
+
+**Fix 3 -- quality has to be a constraint, not a price.** A weighted penalty
+is always outbid by the objective given enough steps. At beta = 2 the edit
+magnitude held for thirty minutes and then drifted: |delta| 0.023 -> 0.067 ->
+0.15 -> 0.19 over three hours, and efficiency collapsed to 0.23. Replacing the
+price with a hinge -- nothing until the penalty passes a target, then steeply
+-- held |delta| at 0.028 for a whole run. This is the same lesson Design A's
+Lagrangian already taught (section 4: the similarity and WER constraints never
+once bound); I used a plain penalty here and had to relearn it.
+
+**And yet the frontier did not move.** Every configuration measured on the
+same six harder voices (unedited soft-min 0.131, PESQ 3.78):
+
+| config | soft-min | d PESQ | efficiency |
+|---|---|---|---|
+| **distilled from PGD x4** | **0.465** | -0.251 | 1.33 |
+| direct, constrained x8 | 0.385 | -0.259 | 0.98 |
+| direct, STFT+mask x2 | 0.342 | -0.141 | 1.50 |
+| direct, constrained x4 | 0.316 | -0.081 | 2.30 |
+| distilled x2 | 0.302 | -0.040 | 4.25 |
+| direct, masking x1 | 0.278 | -0.073 | 2.02 |
+
+Confirmed on all 15 voices with unseen sentences: distilled x4 reaches
+**0.463** soft-min, constrained-direct x8 reaches **0.412** and costs more
+quality (-0.386). Distillation wins.
+
+**What this means.** Direct training is now methodologically correct --
+the right objective, a perceptual cost, and a constraint that holds -- and it
+is far more quality-efficient than it was (0.18 -> 2.30 at the same budget).
+It is still second. The most likely reason is training time rather than
+method: the constrained run had fifty minutes against distillation's full
+collect-and-train pipeline, and its curve was still rising when the clock
+stopped. That is a cheap, specific thing to test, not another hypothesis.
+
+**Best configuration remains unchanged**: the distilled model, 4 passes, for
+soft-min 0.463 at PESQ -0.18 on all 15 voices with similarity and WER intact.
+
 ### Honest limits
 
 - Four iterations recover ~76% of PGD's gain on held-out sentences, not all

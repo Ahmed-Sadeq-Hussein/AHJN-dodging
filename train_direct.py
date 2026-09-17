@@ -49,6 +49,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import cloners
 import diffscore
+import perceptual as P
 from env_config import RESULTS_ROOT
 from eval_generalization import build_policy
 from sac_agent import GradInformedActor
@@ -65,7 +66,23 @@ def main() -> int:
     ap.add_argument("--run-id", default="direct")
     ap.add_argument("--lr", type=float, default=1e-4)
     ap.add_argument("--beta", type=float, default=2.0,
-                    help="weight on mean delta^2; the evasion/quality dial")
+                    help="weight on the quality penalty; the evasion/quality dial")
+    ap.add_argument("--penalty", default="l2",
+                    choices=("l2", "mask", "mrstft", "mrstft+mask"),
+                    help="l2 = mean(delta^2), the version that failed in 7o. "
+                         "mask = delta^2 weighted toward quiet regions. "
+                         "mrstft = multi-resolution STFT distance between the "
+                         "edited and unedited waveform, i.e. measured on what "
+                         "is actually heard")
+    ap.add_argument("--mask-floor", type=float, default=0.05)
+    ap.add_argument("--pen-target", type=float, default=None,
+                    help="treat quality as a CONSTRAINT, not a price: pay "
+                         "nothing while the penalty is below this, then "
+                         "beta * (pen - target)^2. A soft penalty is always "
+                         "outbid by the objective given enough steps -- beta=2 "
+                         "held |delta| for 30 min and lost it over 3 hours")
+    ap.add_argument("--hidden", type=int, default=24)
+    ap.add_argument("--dilations", default="1")
     ap.add_argument("--batch", type=int, default=2)
     ap.add_argument("--window", type=int, default=256)
     ap.add_argument("--val-texts", type=int, default=3)
@@ -104,10 +121,13 @@ def main() -> int:
         net, kind, targs = build_policy(blob, device, args)
         print(f"initialised from {args.init}/{args.init_ckpt} ({kind})")
     else:
-        net = GradInformedActor(hidden=24, max_delta=0.6, dilations=(1,),
+        dil = tuple(int(x) for x in args.dilations.split(","))
+        net = GradInformedActor(hidden=args.hidden, max_delta=0.6, dilations=dil,
                                 use_grad_hint=True).to(device)
-        targs = {"hidden": 24, "dilations": [1], "max_delta": 0.6}
-        print("initialised fresh")
+        targs = {"hidden": args.hidden, "dilations": list(dil), "max_delta": 0.6}
+        rf = 1 + sum(4 * d for d in dil)
+        print(f"initialised fresh: {sum(p.numel() for p in net.parameters()):,} "
+              f"params, receptive field {rf} frames ({rf * 256 / 24000:.2f} s)")
     net.train()
     for p in net.parameters():
         p.requires_grad_(True)
@@ -146,7 +166,7 @@ def main() -> int:
     sm0, mag0 = evaluate(args.eval_limit)
     print(f"\nval soft-min: unedited {base_sm:.4f}   at init {sm0:.4f}   "
           f"PGD {pgd_sm:.4f}   |delta| {mag0:.4f}")
-    print(f"loss = -margin_objective + {args.beta} * mean(delta^2)\n", flush=True)
+    print(f"loss = -margin_objective + {args.beta} * {args.penalty}\n", flush=True)
 
     run_dir = RL / f"direct_{args.run_id}"
     run_dir.mkdir(parents=True, exist_ok=True)
@@ -179,15 +199,32 @@ def main() -> int:
             # the hint is an input, not part of the graph we differentiate
             hint = diffscore.mel_gradient_hint(mel, hift, device, space="margin",
                                                cap=args.margin_cap)
+            # HiFT injects noise, so an unseeded clean/edited pair differs by
+            # 0.025 peak and 0.059 of STFT distance on its own -- more than the
+            # penalty being measured. Reseeding makes the two passes identical,
+            # leaving the edit as the only difference.
+            hseed = int(rng.integers(0, 2 ** 31 - 1))
+            clean = None
+            if "mrstft" in args.penalty:
+                with torch.no_grad(), diffscore.differentiable():
+                    torch.manual_seed(hseed)
+                    clean, _ = hift(mel)
             with diffscore.differentiable():
                 delta = net.max_delta * torch.tanh(net(mel, hint))
+                torch.manual_seed(hseed)
                 wav, _ = hift(mel + delta)
                 obj = diffscore.margin_objective(
                     diffscore.detector_margins(wav.squeeze(0), device),
                     cap=args.margin_cap, mode="softmin", k=1.0)
-                loss = -obj + args.beta * delta.pow(2).mean()
+                pen = P.penalty(args.penalty, delta, mel, edited_wav=wav,
+                                clean_wav=clean, floor=args.mask_floor)
+                if args.pen_target is None:
+                    loss = -obj + args.beta * pen
+                else:
+                    loss = -obj + args.beta * torch.clamp(
+                        pen - args.pen_target, min=0.0).pow(2)
                 (loss / len(idx)).backward()
-            loss_terms.append((float(obj), float(delta.abs().mean())))
+            loss_terms.append((float(obj), float(delta.abs().mean()), float(pen)))
         torch.nn.utils.clip_grad_norm_(net.parameters(), 1.0)
         opt.step()
         step += 1
@@ -203,6 +240,7 @@ def main() -> int:
                             "val_softmin": sm}, run_dir / "best.pt")
                 flag = "  <- best"
             print(f"step {step:>5}  obj {np.mean([t[0] for t in loss_terms]):>7.3f}  "
+                  f"pen {np.mean([t[2] for t in loss_terms]):>7.4f}  "
                   f"|delta| {np.mean([t[1] for t in loss_terms]):.4f}  ||  "
                   f"val soft-min {sm:.4f}  |delta| {mag:.4f}  ({el:.0f} min){flag}",
                   flush=True)
