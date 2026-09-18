@@ -98,6 +98,7 @@ def attack(mels, hift, device, steps, max_delta, lr, beta, pen_target,
             traj.append(sm)
         opt.zero_grad()
         for mel, raw in zip(mels, raws):
+          try:
             with diffscore.differentiable():
                 delta = max_delta * torch.tanh(raw)
                 seed = torch.randint(0, 2 ** 31 - 1, (1,)).item()
@@ -106,13 +107,26 @@ def attack(mels, hift, device, steps, max_delta, lr, beta, pen_target,
                 with torch.no_grad():
                     torch.manual_seed(seed)
                     clean, _ = hift(mel)
-                mg = diffscore.detector_margins(wav.squeeze(0), device)
+                # cap windows in the GRADIENT path only: a ~20 s chunk yields
+                # ~5 windows and RawGAT-ST's conv2d stack over all of them,
+                # on top of the HiFT graph, exhausts a 10 GB card. The global
+                # weights above are computed over the whole file with no_grad,
+                # so the direction being optimised is still the file's.
+                mg = diffscore.detector_margins(wav.squeeze(0), device,
+                                                max_windows=4)
                 # the chunk's contribution to the FILE's soft-min
                 obj = sum(w[i] * mg[n] for i, n in enumerate(names))
                 pen = P.penalty("mrstft+mask", delta, mel,
                                 edited_wav=wav, clean_wav=clean)
                 loss = -obj + beta * torch.clamp(pen - pen_target, min=0).pow(2)
                 loss.backward()
+          except torch.cuda.OutOfMemoryError:
+            # skip this chunk for this step rather than losing the whole clip
+            torch.cuda.empty_cache()
+            continue
+          finally:
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
         opt.step()
         if torch.cuda.is_available():
             torch.cuda.empty_cache()

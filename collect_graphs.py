@@ -59,6 +59,8 @@ CAPTIONS = {
                             "soft-min 0.5 when quality is not constrained", "7n"),
     "17_frontier": ("Every method on one axis: soft-min bought per unit of "
                     "audio damage", "7q"),
+    "18_longform": ("Long audio attacked against the whole-file score: the "
+                    "failure at length was the objective, not the audio", "7r"),
 }
 
 

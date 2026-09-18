@@ -1160,6 +1160,69 @@ stopped. That is a cheap, specific thing to test, not another hypothesis.
 **Best configuration remains unchanged**: the distilled model, 4 passes, for
 soft-min 0.463 at PESQ -0.18 on all 15 voices with similarity and WER intact.
 
+### 7r. Direct training is genuinely second -- and long form was never a ceiling
+
+Two questions closed, in opposite directions.
+
+**Was direct training merely under-trained? No.** Section 7q ended by
+guessing that the constrained run had lost only because it got fifty minutes
+against distillation's full pipeline. Given 7x the compute:
+
+| compute | best val soft-min |
+|---|---|
+| 50 min | 0.382 |
+| **6 hours** | **0.404** |
+
+Seven times the budget bought **+0.02**, on a visibly saturating curve
+(0.306 at 27 min, 0.330 at 67, 0.360 at 148, 0.363 at 228, 0.376 at 349). The
+constraint held throughout -- |delta| 0.017 -> 0.044, against the drift to
+0.28 that an unconstrained penalty allowed -- so this is convergence, not
+instability. On the real metric it still trades badly: soft-min 0.602 costs
+-1.20 PESQ, 0.680 costs -1.93.
+
+**Direct training converges around 0.40 and stops.** It is genuinely below
+distillation (0.465 in budget), not behind it for want of compute. My
+prediction in 7q was wrong, and this is what settles it.
+
+Why imitation beats direct optimisation here is worth stating, because the
+intuition runs the other way. PGD gets sixty gradient steps *per clip* and
+finds a solution no single forward pass can express; distillation inherits the
+shape of those solutions. Direct training has to discover a one-shot function
+unaided and settles into a weaker local optimum. The teacher is not just a
+label source -- it is search the student cannot perform.
+
+**Long form: the aggregation hypothesis was right** (figure 18). Section 7e
+measured the gain vanishing at ~70 s and recorded it as a scope limit. The
+suspected cause was that CosyVoice2 chunks long text, so the edit optimises a
+~20 s local score while the detectors average ~19 windows across the whole
+file. `longform.py` tests it: soft-min's derivative w.r.t. each detector is a
+weight obtainable from a no-grad pass over the concatenated audio, and the
+window mean decomposes, so each chunk can be optimised **against the file's
+score** with only one chunk in the graph at a time. Memory is bounded by chunk
+length, which is what OOM'd before.
+
+| length | audio | chunks | soft-min | gain | d PESQ | d similarity |
+|---|---|---|---|---|---|---|
+| medium | 13 s | 1 | 0.174 -> **0.946** | **+0.771** | **-0.10** | +0.011 |
+| long | 50 s | 3 | 0.263 -> **0.668** | **+0.405** | -0.33 | +0.010 |
+
+At 13 s that is near-total evasion for almost no quality cost, and similarity
+*improves* on both. Against section 7e's per-chunk gains (+0.164 medium,
++0.004 long) the difference is entirely in what was optimised, not in the
+audio.
+
+**Two of this project's "this does not work" conclusions turned out to be
+measurement problems**: the objective measured in a saturated probability
+space (7m), and the objective measured per chunk while scoring per file (here).
+Both looked like ceilings and both moved once the thing optimised matched the
+thing scored. That is the most transferable lesson in this document.
+
+**Caveat:** the long-form numbers are the TEACHER's reach (per-utterance
+optimisation), not a learned operator's. They establish that long audio is
+attackable and that a distillation corpus could be built there; they do not
+show a network doing it in a forward pass. No long-form targets have been
+collected, and the learned operator's long-form result in 7e still stands.
+
 ### Honest limits
 
 - Four iterations recover ~76% of PGD's gain on held-out sentences, not all
