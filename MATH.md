@@ -3,6 +3,15 @@
 Every formula used by `mel_policy.py`, `reward.py` and `train_ppo_mel.py`, stated in
 general form first and then applied to this repo's measured numbers.
 
+> **Scope.** This documents Design A, which **failed** — it made detection
+> significantly easier than doing nothing (slope −0.000727, t = −7.26). It is
+> kept because the derivations are correct and the failure is instructive: the
+> soft-min aggregator handed 99.9% of its gradient to two of the four detectors
+> and left the other two undefended, so the policy degraded them. The method
+> that worked is distillation from a PGD teacher — see
+> [`Plan_X/RESULTS.md`](Plan_X/RESULTS.md) section 7 — and it optimises the
+> logit margin of section 7m, not the probability-space reward derived here.
+
 > **Viewing this file:** VS Code's built-in Markdown preview renders the math
 > (KaTeX). `Ctrl+Shift+V`, or `Ctrl+K V` for a side-by-side preview. No extension
 > needed.
