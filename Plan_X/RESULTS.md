@@ -1201,12 +1201,32 @@ window mean decomposes, so each chunk can be optimised **against the file's
 score** with only one chunk in the graph at a time. Memory is bounded by chunk
 length, which is what OOM'd before.
 
-| length | audio | chunks | soft-min | gain | d PESQ | d similarity |
-|---|---|---|---|---|---|---|
-| medium | 13 s | 1 | 0.174 -> **0.946** | **+0.771** | **-0.10** | +0.011 |
-| long | 50 s | 3 | 0.263 -> **0.668** | **+0.405** | -0.33 | +0.010 |
+| length | audio | chunks | n | soft-min | gain | d PESQ | d similarity |
+|---|---|---|---|---|---|---|---|
+| medium | 13 s | 1 | 4 | 0.174 -> **0.946** | **+0.771** | **-0.10** | +0.011 |
+| long | 50 s | 3 | 4 | 0.263 -> **0.668** | +0.405 | -0.33 | +0.010 |
+| xlong | 78 s | 5 | 3 | 0.118 -> **0.545** | +0.427 | **-0.28** | -0.011 |
 
-Those means hide a wide spread at 50 s -- thresh 0.233 -> 0.779, Tywin_2
+**The 72 s case is the one that matters**, because that is the exact length
+section 7e tested, and evelynn was in both runs -- same voice, same length,
+only the optimised quantity changed:
+
+| objective | evelynn at ~72 s | gain |
+|---|---|---|
+| per-chunk learned operator (7e) | 0.0717 -> 0.0944 | +0.023 |
+| **global file objective (7r)** | 0.097 -> **0.461** | **+0.364** |
+
+Across the three voices at ~78 s: **+0.427 mean gain, inside the -0.30 PESQ
+budget, with WER unmoved (-0.007) and similarity -0.011.** Two of three clear
+soft-min 0.5. `skip_frac` is 0.000 on all three, so these are whole-file
+optimisations, not partial ones -- worth stating because an earlier attempt at
+six voices ran the card to 9988/10240 MiB, where silent OOM skips would have
+produced numbers that looked identical to clean ones.
+
+And the decay is not monotonic: 78 s (+0.427) slightly beats 50 s (+0.405).
+The cost of length lands between 13 s and 50 s and then flattens, rather than
+compounding with every additional chunk. The 50 s mean is also dragged by one
+voice; those means hide a wide spread at 50 s -- thresh 0.233 -> 0.779, Tywin_2
 0.541 -> 0.831, swain 0.169 -> 0.707, but riven only 0.109 -> 0.354. Three of
 four clear the 0.5 bar; one does not. At 13 s all four land between 0.878 and
 1.000, so the difficulty is length, not voice.
