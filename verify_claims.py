@@ -87,6 +87,17 @@ def main() -> int:
         n_pass = sum(1 for v in big["per_voice"] if v["new"]["softmin"] >= 0.5)
         claim("voices >= 0.5 at x14", 14, n_pass, "7n", 0.5)
 
+    # ---- 7n addendum: base vs speaker-conditioned, head to head -------------
+    bs = _load("all15_base_vs_spk.json")
+    if bs:
+        c = bs["clips"]
+        claim("base 21k soft-min", 0.4540, _mean(c, "new", "softmin"), "7n")
+        claim("spk 31k soft-min", 0.4632, _mean(c, "old", "softmin"), "7n")
+        claim("base/spk unedited", 0.2764, _mean(c, "baseline", "softmin"), "7n")
+        for arm, lab in (("new", "base"), ("old", "spk")):
+            n_pass = sum(1 for v in bs["per_voice"] if v[arm]["softmin"] >= 0.5)
+            claim(f"{lab} voices >= 0.5", 6, n_pass, "7n", 0.5)
+
     # ---- section 7r: long form under the global-file objective ---------------
     for name, length, gain, sec in (("longform_attack_medlong.json", "medium", 0.771, "7r"),
                                     ("longform_attack_medlong.json", "long", 0.405, "7r"),

@@ -105,7 +105,13 @@ def main() -> int:
 
     work = RL_RUNS / "_all15_tmp"
     work.mkdir(parents=True, exist_ok=True)
-    out = Path(args.out) if args.out else RL_RUNS / "all15_eval.json"
+    # A bare --out name is a sibling of the default, not a file in whatever
+    # directory the run happened to start from -- results belong under
+    # RESULTS_ROOT, not in the repo. An explicit path is still honoured.
+    out = RL_RUNS / "all15_eval.json"
+    if args.out:
+        p = Path(args.out)
+        out = p if p.is_absolute() or p.parent != Path(".") else RL_RUNS / p.name
     stream = out.with_suffix(".jsonl")
     print(f"\n{len(voices)} voices x {len(texts)} unseen sentences x {len(arms)} arms"
           f" = {len(voices) * len(texts) * len(arms)} clips\n", flush=True)

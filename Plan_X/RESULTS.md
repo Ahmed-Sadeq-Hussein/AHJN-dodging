@@ -996,6 +996,41 @@ zero-initialised so it starts identical to the unconditioned net) recovered
 rejected -- one shared model is sufficient, per-voice adaptation is not the
 missing piece.
 
+**Confirmed end to end (2026-09-18).** The above compares *recovered fraction*
+on held-out sentences, which is one step removed from the metric that matters.
+The two checkpoints were re-run head to head through the full pipeline, all 15
+voices x 4 unseen sentences at 4 passes, three arms from one shared seed
+(`eval_all15.py --new-run distill_margin_base --old-run distill_margin_spk`):
+
+| | soft-min | d PESQ | d similarity | WER | voices >= 0.5 |
+|---|---|---|---|---|---|
+| unedited | 0.2764 | -- | -- | 3.6% | 1/15 |
+| **base, 21,352 params** | **0.4540** | -0.172 | +0.0022 | 5.3% | 6/15 |
+| spk-conditioned, 30,616 params | 0.4632 | -0.178 | +0.0052 | 3.9% | 6/15 |
+
+Paired over 60 clips, base minus spk:
+
+| metric | difference | t | p |
+|---|---|---|---|
+| soft-min | -0.0092 | -0.98 | 0.331 |
+| WER | +1.33 pp | +1.72 | 0.090 |
+| PESQ | +0.006 | +0.17 | 0.867 |
+| similarity | -0.0030 | **-3.97** | **<0.001** |
+
+**The two are indistinguishable on the objective** (p = 0.33), and the WER gap
+that looks large in the means does not survive a paired test either (p = 0.09).
+The one significant difference is similarity, at 0.003 in the conditioned
+model's favour -- real but far below anything that matters, and both arms
+*improve* on the unedited clone.
+
+So the conclusion stands on the metric that counts, not just on recovered
+fraction: **use the 21k unconditioned model.** It matches a model with 43% more
+parameters. Both reach +0.18 soft-min over unedited at t = 7.5, p < 1e-9.
+
+One correction this forced: the 0.463 reported elsewhere in this section came
+from the **spk** checkpoint. The recommended 21k model's own figure is
+**0.454**, and the two differ by less than noise.
+
 **A warning sign:** the fixed-average-edit control now recovers **+34.5%**,
 *more than the trained network's 25%*. On the probability dataset that control
 was -5.4% (section 7). Margin-space solutions evidently share a strong

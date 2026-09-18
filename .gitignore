@@ -15,6 +15,12 @@ __pycache__/
 *.mp4
 *.wav
 
+# evaluation results belong under RESULTS_ROOT. eval_all15.py appends a .jsonl
+# beside its output as it goes, and a bare --out used to land it here; one got
+# committed that way. graphs/summary.json is the exception -- it is a small
+# derived record of the figures and is kept deliberately.
+*.jsonl
+
 # model checkpoints and PGD datasets live in RESULTS_ROOT; never commit them
 *.pt
 *.pth
