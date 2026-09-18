@@ -89,7 +89,7 @@ python Tester.py --voice riven
 ## Best result: apply the distilled operator
 
 This is the configuration that works. Two RL designs (below) produced nothing;
-a small network trained by regression on PGD solutions, applied ten times, is
+a small network trained by regression on PGD solutions, applied a few times, is
 what moved the detectors. Full reasoning, numbers and caveats are in
 [`Plan_X/RESULTS.md`](Plan_X/RESULTS.md).
 
@@ -98,19 +98,44 @@ what moved the detectors. Full reasoning, numbers and caveats are in
 & "E:\envs\voiceclone\python.exe" apply_best.py --voice evelynn --text "I sentence you to death." --out base.wav --no-edit --score
 ```
 
-On held-out voices with unseen sentences: mean detector score 0.34 -> 0.69
-(t = 12.26), soft-min 0.11 -> 0.37, similarity and WER unchanged, PESQ -0.22
-(at 4 passes PESQ is unchanged but the gain is half). Strongest on
-5-15 s utterances; the gain disappears on ~70 s clips.
+Across all 15 voices with unseen sentences, the current best operating point is
+the **margin-objective model applied 4 times**: soft-min 0.276 -> **0.463**,
+similarity 0.819 -> 0.824, WER 3.6% -> 3.9%, PESQ -0.18 (inside a -0.30
+budget). Pushed to 14 passes it reaches soft-min **0.800 with 14 of 15 voices
+above 0.5**, but at -0.85 PESQ, outside the budget.
+
+Read that as a large *relative* improvement, not evasion: most clips at 0.463
+would still be caught by a detector thresholding at 0.5.
+
+Three caveats that took real compute to establish:
+
+- **Unseen voices get about half.** Recovery against the teacher is 79% on
+  trained voices but 45% on held-out ones. Adding voices to the dataset is the
+  largest measured lever left.
+- **Pass count is a quality dial.** 4 passes ~ free, 10 costs -0.22 PESQ, 14
+  costs -0.85.
+- **Long form is attackable, but only by the teacher so far.** An earlier
+  version of this README said "the gain disappears on ~70 s clips". That was an
+  aggregation artefact, not a length limit: optimising each chunk against the
+  *whole file's* score gets +0.427 soft-min at 78 s (`longform.py`, section
+  7r). No learned operator does this in a forward pass yet, so the per-chunk
+  operator's long-form result still stands.
 
 ### Reproducing it
 
 | step | command | time |
 |---|---|---|
-| 1. collect PGD targets | `python collect_pgd.py --max-hours 3.3` | ~3 h |
-| 2. distil | `python distill.py --run-id final --dilations 1 --hidden 24 --weight-decay 1e-3 --lr 1e-4 --input-noise 0.15 --max-hours 0.5` | ~30 min |
-| 3. evaluate | `python eval_final.py --distill-run distill_final --edit-iters 10` | ~45 min |
-| 4. figures | `python plot_distill.py --run distill_final --control -0.155` | ~1 min |
+| 1. collect PGD targets | `python collect_pgd.py --objective margin --margin-mode softmin --voices all --measure-wer` | ~3 h |
+| 2. distil | `python distill.py --run-id margin_final --objective margin --hidden 24 --dilations 1 --weight-decay 1e-3 --lr 1e-4 --input-noise 0.15` | ~30 min |
+| 3. evaluate | `python eval_all15.py --new-run margin_final --new-iters 4` | ~45 min |
+| 4. figures | `python plot_margin.py` | ~1 min |
+
+The earlier probability-objective pipeline (sections 2-7l) reproduces with
+`collect_pgd.py --max-hours 3.3`, `distill.py --run-id final`,
+`eval_final.py --distill-run distill_final --edit-iters 10` and
+`plot_distill.py`. Section 7m explains why the margin objective replaced it:
+the probability space was saturated on the two detectors that decide the score,
+and the "ceiling" measured there was an artefact.
 
 All figures live in [`graphs/`](graphs/INDEX.md) — `graphs/INDEX.md` lists what
 each one shows and which section of `Plan_X/RESULTS.md` cites it. Plot scripts
@@ -129,16 +154,25 @@ in the per-run figures written under `RESULTS_ROOT` and rebuilds the index.
 | `quality.py` | SQUIM PESQ / STOI / MOS estimates -- the perceptual axis similarity and WER cannot see. |
 | `textbank.py` | Train/eval split of sentences and voices, kept strictly apart. |
 | `probe_pgd.py` | The original feasibility check: how far can white-box PGD move the detectors? |
-| `probe_amplify.py` | Scans edit scale x number of passes on stored mels. Found that 10 passes recovers 97% of PGD. |
-| `probe_teacher.py` | Sweeps PGD's own settings (`--hardest` selects clips the detectors actually catch). |
-| `probe_longform.py` | Length curve (short / medium / ~70 s). |
+| `probe_amplify.py` | Scans edit scale x number of passes on stored mels. Found that iterating compounds while scaling destroys -- the step-operator result. |
+| `probe_teacher.py`, `probe_teacher_quality.py` | Sweeps PGD's own settings (`--hardest` selects clips the detectors actually catch) and prices what a stronger teacher costs in similarity and PESQ. |
+| `probe_longform.py` | Length curve (short / medium / ~70 s) for the per-chunk operator. |
+| `probe_objective.py` | The saturation finding: every probability-space objective returns an identical score because the deciding detectors have ~5,000x smaller gradients. Section 7m. |
+| `probe_gap.py` | Scores the same mel unedited / student / teacher on all 15 voices. Source of the 79% trained vs 45% held-out recovery split. |
+| `probe_transfer.py` | Scores the operator against detectors that influenced nothing. `--rescore` re-scores kept clips without regenerating. |
+| `analyze_voices.py` | Correlates reference acoustics with per-voice gain (Spearman, constants rejected). Figure 14. |
+| `eval_all15.py` | Per-voice scorecard across all 15 voices against the quality thresholds. The headline number comes from here. |
+| `perceptual.py` | Psychoacoustic masking weights and multi-resolution STFT distance -- a penalty that tracks audible damage, which `mean(delta^2)` does not. |
+| `train_direct.py` | Backpropagates the objective straight into the weights, no targets. Methodologically correct, converges below distillation (7q, 7r). |
+| `longform.py` | Attacks a whole multi-chunk file by optimising each chunk against the *global* file score. Overturned the long-form scope limit. |
 | `probe_prosody.py`, `prosody.py` | Emphasis, breath, pause and instruct-mode variants of identical content. |
 | `probe_reference.py` | Denoise / high-pass / normalise the reference before enrolment. |
 | `demo_best.py`, `demo_listen.py` | Keep-the-wavs demos for listening. |
 | `eval_ab_voices.py`, `eval_generalization.py`, `eval_policy.py` | Earlier paired evaluations of the RL policies. |
 | `sac_agent.py`, `train_sac_mel.py` | Design B (SAC with gradient hint). Flat -- kept for the record. |
 | `mel_policy.py`, `reward.py`, `train_ppo_mel.py` | Design A (PPO-Lagrangian). Degraded -- kept for the record. |
-| `analyze_run.py`, `plot_plan_x.py`, `plot_ab_voices.py`, `plot_distill.py` | Trend analysis and every figure in `Plan_X/`. |
+| `analyze_run.py`, `plot_plan_x.py`, `plot_ab_voices.py`, `plot_distill.py`, `plot_margin.py`, `plot_frontier.py`, `plot_longform.py` | Trend analysis and every figure in `graphs/`. Each writes via `env_config.GRAPHS_DIR`; defaults match the documented invocations. |
+| `collect_graphs.py` | Gathers the per-run figures written under `RESULTS_ROOT` into `graphs/runs/` and rebuilds `graphs/INDEX.md`. |
 
 `cloners.generate` now also takes `instruct=` (style prompting via
 `inference_instruct2`) and accepts CosyVoice2 prosody tags (`<strong>`,
