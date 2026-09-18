@@ -137,6 +137,22 @@ The earlier probability-objective pipeline (sections 2-7l) reproduces with
 the probability space was saturated on the two detectors that decide the score,
 and the "ceiling" measured there was an artefact.
 
+### Checking the write-up against the data
+
+```powershell
+python verify_claims.py
+```
+
+Re-derives every headline number in `Plan_X/RESULTS.md` from the JSON the runs
+wrote and prints written-vs-actual for each. Reads JSON only -- no GPU, either
+env. Exits non-zero on a mismatch, and reports SKIP rather than a value for
+anything the stored results cannot answer. 17/17 verified as of 2026-09-18.
+
+This exists because several numbers were wrong at some point and each was
+caught by hand, late: a mismatched denominator in section 5, a recovery figure
+measured on the wrong subset in 7h, and a result called free in 7h whose cost
+had not been measured until 7k.
+
 All figures live in [`graphs/`](graphs/INDEX.md) — `graphs/INDEX.md` lists what
 each one shows and which section of `Plan_X/RESULTS.md` cites it. Plot scripts
 write there via `env_config.GRAPHS_DIR`; `python collect_graphs.py` also pulls
