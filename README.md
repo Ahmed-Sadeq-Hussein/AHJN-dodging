@@ -98,14 +98,28 @@ what moved the detectors. Full reasoning, numbers and caveats are in
 & "E:\envs\voiceclone\python.exe" apply_best.py --voice evelynn --text "I sentence you to death." --out base.wav --no-edit --score
 ```
 
-Across all 15 voices with unseen sentences, the current best operating point is
-the **margin-objective model applied 4 times**: soft-min 0.276 -> **0.463**,
-similarity 0.819 -> 0.824, WER 3.6% -> 3.9%, PESQ -0.18 (inside a -0.30
-budget). Pushed to 14 passes it reaches soft-min **0.800 with 14 of 15 voices
-above 0.5**, but at -0.85 PESQ, outside the budget.
+Across all 15 voices with unseen sentences there are **two defensible operating
+points**, both inside a -0.30 PESQ budget:
 
-Read that as a large *relative* improvement, not evasion: most clips at 0.463
-would still be caught by a detector thresholding at 0.5.
+| | unedited | probability model x10 | margin model x4 |
+|---|---|---|---|
+| soft-min | 0.276 | **0.489** | 0.463 |
+| d PESQ | — | -0.28 | **-0.18** |
+| soft-min per PESQ point | — | 0.76 | **1.04** |
+| similarity | 0.819 | 0.823 | 0.824 |
+| WER | 3.6% | 4.8% | 3.9% |
+
+The first scores higher; the second is cheaper and more efficient. Prefer the
+margin model when audio quality is the binding constraint, and the default when
+you just want the highest score that still fits the budget. Only the margin
+model has headroom past it: at 14 passes it reaches soft-min **0.800 with 14 of
+15 voices above 0.5**, at -0.85 PESQ, outside any budget.
+
+`apply_best.py` defaults to the first; add `--run distill_margin_base --iters 4`
+for the second.
+
+Read all of this as a large *relative* improvement, not evasion: most clips at
+0.463 would still be caught by a detector thresholding at 0.5.
 
 Three caveats that took real compute to establish:
 
