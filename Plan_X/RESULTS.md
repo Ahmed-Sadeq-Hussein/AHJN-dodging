@@ -757,6 +757,14 @@ under power, these should be treated as suggestive only.
 Since the operator recovers 97% of PGD's gain, further progress has to come
 from a better teacher. PGD's settings had never been tuned.
 
+> **That premise is false, and it makes this section's conclusion narrower than
+> it reads.** The 97% was measured on training voices only; 7l puts held-out
+> recovery at 45%. So "further progress has to come from a better teacher" was
+> wrong -- on unseen voices most of the available gain was still unclaimed by
+> the student, and more voices in the dataset was the cheaper lever. What
+> survives below is the *pricing* of a stronger teacher, which is sound and
+> still worth reading: a stronger teacher costs more quality than it buys.
+
 **A first sweep was invalid and is recorded as a warning.** Selecting examples
 alphabetically picked ten whose baseline soft-min was already 0.92; PGD
 saturates those at 1.0 under any setting, so the grid came out flat and
