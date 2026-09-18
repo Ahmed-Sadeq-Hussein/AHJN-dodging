@@ -1,6 +1,6 @@
 r"""
 plot_ab_voices.py -- turn eval_ab_voices.py's JSON into the two requested
-figures, written into Plan_X/.
+figures, written into graphs/ (env_config.GRAPHS_DIR).
 
     python plot_ab_voices.py
 

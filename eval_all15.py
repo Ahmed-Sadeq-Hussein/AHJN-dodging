@@ -1,7 +1,7 @@
 r"""
 eval_all15.py -- the scorecard: every voice, every target. RUN IN "voiceclone".
 
-    python eval_all15.py --new-run distill_margin --new-iters 10
+    python eval_all15.py --new-run distill_margin_base --new-iters 4
 
 The brief is a single model that is good on all 15 voices at three things at
 once -- detection, similarity and WER -- so this reports all three per voice,
@@ -63,9 +63,14 @@ def adapter_for(run, ckpt, device, hift, iters, args):
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--new-run", default="distill_margin")
+    # "distill_margin" never existed as a directory -- the margin runs are
+    # distill_margin_base / _spk / _spk32 -- so the old default could not load.
+    # base is the one to prefer: section 7n found speaker conditioning does
+    # nothing (26.5% recovered unconditioned against 26.3% conditioned), so the
+    # smaller unconditioned model is the honest recommendation.
+    ap.add_argument("--new-run", default="distill_margin_base")
     ap.add_argument("--new-ckpt", default="best.pt")
-    ap.add_argument("--new-iters", type=int, default=10)
+    ap.add_argument("--new-iters", type=int, default=4)
     ap.add_argument("--old-run", default="distill_final")
     ap.add_argument("--old-ckpt", default="best.pt")
     ap.add_argument("--old-iters", type=int, default=10)

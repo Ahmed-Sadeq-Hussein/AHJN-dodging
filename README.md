@@ -126,8 +126,8 @@ Three caveats that took real compute to establish:
 | step | command | time |
 |---|---|---|
 | 1. collect PGD targets | `python collect_pgd.py --objective margin --margin-mode softmin --voices all --measure-wer` | ~3 h |
-| 2. distil | `python distill.py --run-id margin_final --objective margin --hidden 24 --dilations 1 --weight-decay 1e-3 --lr 1e-4 --input-noise 0.15` | ~30 min |
-| 3. evaluate | `python eval_all15.py --new-run margin_final --new-iters 4` | ~45 min |
+| 2. distil | `python distill.py --run-id margin_base --objective margin --hidden 24 --dilations 1 --weight-decay 1e-3 --lr 1e-4 --input-noise 0.15` | ~30 min |
+| 3. evaluate | `python eval_all15.py --new-run distill_margin_base --new-iters 4` | ~45 min |
 | 4. figures | `python plot_margin.py` | ~1 min |
 
 The earlier probability-objective pipeline (sections 2-7l) reproduces with

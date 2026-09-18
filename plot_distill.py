@@ -1,7 +1,7 @@
 r"""
-plot_distill.py -- figures for the distillation run, into Plan_X/.
+plot_distill.py -- figures for the distillation run, into graphs/.
 
-    python plot_distill.py --run distill_distill1
+    python plot_distill.py            # defaults are the documented invocation
 
 Figure  9  distillation learning curves: regression loss, the cosine between
            predicted and target edit (direction agreement, which MSE hides),

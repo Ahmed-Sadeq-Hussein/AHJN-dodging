@@ -1,5 +1,5 @@
 r"""
-plot_margin.py -- figures for the margin-objective work, into Plan_X/.
+plot_margin.py -- figures for the margin-objective work, into graphs/.
 
     python plot_margin.py
 
