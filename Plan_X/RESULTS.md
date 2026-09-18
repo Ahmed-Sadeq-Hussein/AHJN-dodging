@@ -500,6 +500,13 @@ holdout cannot say whether every detector transfers equally.
 
 ### 7e. Long form: the gain does not survive length
 
+> **Superseded in part by 7r.** The measurement below is correct for the
+> learned operator applied per chunk, and that result stands. The *conclusion*
+> that long audio is a ceiling does not: the suspected aggregation mismatch
+> named at the end of this section turned out to be the whole story. Optimising
+> each chunk against the WHOLE FILE's score reaches +0.427 soft-min at 78 s.
+> Read 7r before taking this section as a scope limit.
+
 Section 6b showed baseline soft-min collapsing ~7x from 4.6 s to 50 s but
 never tested the working operator there. `probe_longform.py` runs three
 lengths built from unseen `EVAL_TEXTS`: 15 words (~4.6 s), 44 words
@@ -678,6 +685,14 @@ PGD reaches 0.6325 on the same mels in 60 gradient steps. **Ten forward
 passes reach 0.6416 -- 97.1% of the gain, at |delta| = 0.068, an edit 2.4x
 smaller than PGD's 0.161.** Twelve passes is slightly worse, so the optimum
 is near ten.
+
+> **The 97.1% is measured on TRAINING voices only.** Section 7l re-measured it
+> properly across all 15 voices: **79% on trained voices, 45% on held-out
+> ones.** The conclusion drawn from this number at the time -- that the student
+> had caught its teacher, so more data could not help -- was wrong, and adding
+> voices is now the largest measured lever remaining. The figures in this
+> section are correct for the mels they were computed on; the generalisation
+> claim was not.
 
 Confirmed end-to-end on held-out voices with unseen sentences (24 clips):
 
