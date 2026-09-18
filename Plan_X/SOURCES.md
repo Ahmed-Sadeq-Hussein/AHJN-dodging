@@ -3,9 +3,10 @@
 Every external paper, model, library and standard this project relied on,
 grouped by the process it supports, with the repo file where it is used.
 
-**Verification.** All 36 arXiv IDs were checked against the arXiv API, all
+**Verification.** All 39 arXiv IDs were checked against the arXiv API, all
 GitHub and web links returned HTTP 200, and all four DOIs were confirmed
-through Crossref (2026-09-14).
+through Crossref (2026-09-14); the three added for sections 7m and
+7q were checked the same way (2026-09-18).
 
 **How to read "role".**
 - **used** — we run this model/code or implement this method directly.
@@ -76,6 +77,7 @@ through Crossref (2026-09-14).
 | Goodfellow et al. (2014). *Explaining and Harnessing Adversarial Examples.* [arXiv:1412.6572](https://arxiv.org/abs/1412.6572) | related — origin of gradient-based adversarial perturbations | — |
 | Carlini & Wagner (2018). *Audio Adversarial Examples: Targeted Attacks on Speech-to-Text.* [arXiv:1801.01944](https://arxiv.org/abs/1801.01944) | related — optimisation attacks on audio models | — |
 | Liu et al. (2019). *Adversarial Attacks on Spoofing Countermeasures of automatic speaker verification.* [arXiv:1910.08716](https://arxiv.org/abs/1910.08716) | related — **the closest prior work to this project**: adversarial attacks specifically against anti-spoofing detectors | — |
+| Carlini & Wagner (2016; IEEE S&P 2017). *Towards Evaluating the Robustness of Neural Networks.* [arXiv:1608.04644](https://arxiv.org/abs/1608.04644) | **basis** — optimise the pre-softmax logit margin rather than a probability. Section 7m: the two detectors deciding soft-min were saturated at P ~ 1e-6 with gradients ~5,000x smaller than the rest, so the probability objective had been pushing against a wall. Switching space took the teacher 0.574 -> 0.9949 | `diffscore.detector_margins`, `collect_pgd.py --objective margin` |
 
 ## 7. Distillation — the method that worked (section 7)
 
@@ -86,6 +88,17 @@ through Crossref (2026-09-14).
 | Poursaeed et al. (2017). *Generative Adversarial Perturbations.* [arXiv:1712.02328](https://arxiv.org/abs/1712.02328) | related — same idea, and the image-attack counterpart of our fixed-average-edit control (universal vs input-conditioned perturbations) | `distill.py` |
 | Andrychowicz et al. (2016). *Learning to learn by gradient descent by gradient descent.* [arXiv:1606.04474](https://arxiv.org/abs/1606.04474) | related — learned update rules applied repeatedly; the nearest analogue to finding that 10 re-hinted passes beat 1 (7b, 7h) | `probe_amplify.py`, `eval_final.py` |
 | Yu & Koltun (2015). *Multi-Scale Context Aggregation by Dilated Convolutions.* [arXiv:1511.07122](https://arxiv.org/abs/1511.07122) · van den Oord et al. (2016). *WaveNet.* [arXiv:1609.03499](https://arxiv.org/abs/1609.03499) | used — dilated convolutions for the wide-receptive-field variants in the capacity sweep (which lost to the 5-frame model) | `sac_agent.py`, `distill.py` |
+
+## 7b. Perceptual cost in the loss (section 7q)
+
+The direct-training work needed a penalty that tracks *audible* damage;
+`mean(delta^2)` does not, and raising its weight made PESQ worse while the
+optimiser simply found loud edits that scored well.
+
+| source | role | where in repo |
+|---|---|---|
+| Qin et al. (2019). *Imperceptible, Robust, and Targeted Adversarial Examples for Automatic Speech Recognition.* [arXiv:1903.10346](https://arxiv.org/abs/1903.10346) | **basis** — psychoacoustic frequency masking, so an edit is cheap under loud speech and expensive in near-silence. Ours is a simplified per-band approximation of their masking threshold, not the full model | `perceptual.masking_weights`, `perceptual.masked_l2` |
+| Yamamoto et al. (2019). *Parallel WaveGAN: A fast waveform generation model based on generative adversarial networks with multi-resolution spectrogram.* [arXiv:1910.11480](https://arxiv.org/abs/1910.11480) | **basis** — multi-resolution STFT distance, computed on the waveform actually heard rather than on the mel. Raised quality efficiency from 0.18 to 2.30 soft-min per PESQ point | `perceptual.mrstft` |
 
 ## 8. Transfer to unseen detectors (sections 7d, 7k)
 

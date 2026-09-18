@@ -5,7 +5,7 @@ found in Plan_X. RUN IN THE "voiceclone" ENV.
     python apply_best.py --voice evelynn --text "I sentence you to death." --out out.wav
     python apply_best.py --voice evelynn --text-file lines.txt --out-dir clips\ --score
 
-Best configuration (Plan_X/RESULTS.md sections 7 and 7h):
+Default configuration (Plan_X/RESULTS.md sections 7 and 7h):
 
     checkpoint   rl_runs/distill_final/best.pt   21,352 params, 5-frame receptive field
     passes       10, each re-computing the gradient hint on the edited mel
@@ -13,9 +13,28 @@ Best configuration (Plan_X/RESULTS.md sections 7 and 7h):
 
 On held-out voices with unseen sentences this took mean detector score
 0.34 -> 0.69 (t = 12.26) and soft-min 0.11 -> 0.37, with similarity and WER
-unchanged but PESQ down 0.22. --iters 4 keeps PESQ intact for about half the
-gain. It is strongest on ~5-15 s utterances; on ~70 s clips the gain
-disappears (section 7e), and ten passes on a long clip can exhaust a 10 GB GPU.
+unchanged but PESQ down 0.22. Across all 15 voices it reaches soft-min 0.489
+at -0.28 PESQ.
+
+There are TWO defensible operating points, both inside a -0.30 PESQ budget
+(section 7n). This default scores higher; the margin-objective model at four
+passes is cheaper and more efficient:
+
+    --run distill_margin_base --iters 4    soft-min 0.463 at -0.18 PESQ
+
+Prefer the margin model when audio quality is the binding constraint, and this
+default when you just want the highest score that still fits the budget. Only
+the margin model has headroom beyond it: at 14 passes it reaches soft-min
+0.800 with 14 of 15 voices above 0.5, at -0.85 PESQ, outside any budget.
+
+--iters is a quality dial, not a free setting: 4 passes costs nothing
+measurable, 10 costs -0.22 PESQ, 14 costs -0.85.
+
+Strongest on ~5-15 s utterances. On ~70 s clips THIS operator's gain
+disappears (section 7e) and ten passes can exhaust a 10 GB GPU -- but that is a
+limit of applying the edit per chunk, not of long audio: optimising each chunk
+against the whole file's score reaches +0.427 soft-min at 78 s (longform.py,
+section 7r). That route is per-utterance optimisation, not this forward pass.
 
 --no-edit renders the same seed without the edit, for an A/B comparison.
 --score prints the four detector scores, similarity and WER for each clip.
