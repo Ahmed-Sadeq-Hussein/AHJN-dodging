@@ -246,7 +246,10 @@ def fig6_pgd(out):
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--a-run", default="designA_budget4h")
-    ap.add_argument("--b-run", default="designB_B_main")
+    # designB_B9h is the run section 4 documents: 396 iterations across two
+    # sessions. designB_B_main is a 7-iteration stub and silently produced
+    # wrong figures 1/1b/3/4/5 when it was the default.
+    ap.add_argument("--b-run", default="designB_B9h")
     ap.add_argument("--out", default=str(PLAN_X))
     args = ap.parse_args()
 

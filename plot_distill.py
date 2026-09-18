@@ -19,6 +19,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import textwrap
 from pathlib import Path
 
 import matplotlib
@@ -107,7 +108,12 @@ def _bars(ax, groups, arms, key, pgd_line=None, scale=1.0, pct=False):
         ax.axhline(pgd_line * scale, color=C_PGD, lw=1.6, ls="--",
                    label="PGD ceiling (per-utterance)")
     ax.set_xticks(xs)
-    ax.set_xticklabels([g["label"].split(",")[0] for g in groups], fontsize=9)
+    # The group labels are long ("REFERENCE voices (seen in collection)") and
+    # at two groups per axis they were drawing on top of each other, which made
+    # figure 11 unreadable. Wrap rather than truncate: which group is which is
+    # the whole point of the comparison.
+    ax.set_xticklabels(["\n".join(textwrap.wrap(g["label"].split(",")[0], 18))
+                        for g in groups], fontsize=8.5)
     ax.grid(axis="y", alpha=0.25, lw=0.6)
     ax.set_axisbelow(True)
     if pct:
@@ -190,6 +196,14 @@ def fig_sweep(control_rec=None):
         if not (cfg_p.is_file() and ck.is_file()):
             continue
         cfg = json.loads(cfg_p.read_text(encoding="utf8"))
+        # This figure's claim is that every point trained on the SAME 221
+        # targets, so only runs on the default (probability-objective) dataset
+        # belong. Later sections added distill runs on pgd_dataset_margin,
+        # _breath and _lodo; those have a different corpus and a different
+        # denominator for "recovered", and silently mixing them in made the
+        # figure contradict its own title.
+        if cfg.get("data"):
+            continue
         blob = torch.load(ck, map_location="cpu", weights_only=False)
         if "recovered" not in blob:
             continue
@@ -286,8 +300,12 @@ def fig_amplify(run):
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--run", default="distill_distill1")
-    ap.add_argument("--control", type=float, default=None,
+    # These defaults are the documented invocation (Plan_X/RESULTS.md,
+    # "Reproducing"). distill_distill1 was an early sweep run, and leaving it
+    # as the default meant a bare `python plot_distill.py` silently redrew
+    # figures 9-12 from the wrong model and dropped the control line.
+    ap.add_argument("--run", default="distill_final")
+    ap.add_argument("--control", type=float, default=-0.155,
                     help="recovered fraction of the fixed-average-edit control")
     ap.add_argument("--eval", default=None)
     args = ap.parse_args()

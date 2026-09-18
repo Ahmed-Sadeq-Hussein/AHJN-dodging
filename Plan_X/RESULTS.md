@@ -4,8 +4,14 @@ What was run, what came out, and why each conclusion follows. Every figure
 lives in [`../graphs/`](../graphs/INDEX.md) with an index saying what each one
 shows; every number below is reproducible from the scripts named against it.
 
-Status: complete. Sections 0–6 cover the two RL designs and the audits that
-explain why they failed; section 7 covers the distillation run that worked.
+Status: complete. Sections 0-6 cover the two RL designs and the audits that
+explain why they failed; section 7 covers the distillation run that worked and
+the eighteen follow-ups that refined, corrected and bounded it. Sections 7m and
+7r are the two places where a conclusion recorded as a ceiling turned out to be
+a measurement artefact -- read those first if you read nothing else.
+
+A readable narrative version of this document, with the figures inline, is the
+final report; this file remains the complete record.
 
 ---
 
@@ -1250,20 +1256,36 @@ collected, and the learned operator's long-form result in 7e still stands.
 
 ### Honest limits
 
-- Four iterations recover ~76% of PGD's gain on held-out sentences, not all
-  of it. PGD remains better per utterance; distillation buys amortisation —
-  four forward passes instead of sixty gradient steps — at most of the value.
-- Absolute soft-min on held-out voices is 0.239. Most of these clips would
-  still be caught. This is a large *relative* improvement, not evasion.
-- The scale/iteration setting was chosen on 12–18 stored held-out-sentence
-  mels. Scale 1.0 was kept deliberately untuned to limit selection on that
-  small sample; iters = 4 was confirmed independently on held-out voices.
-- Everything here is short-form (5–15 s). Section 6b shows baseline soft-min
-  collapsing 7× by 50 s, and nothing in this section was tested there.
-- 221 training targets is small. The capacity sweep is monotone all the way
-  down, which usually means more data would help more than more model.
-- Detector scores come from four specific checkpoints. Nothing here claims
-  transfer to detectors outside this set.
+Current as of 7r. Earlier revisions of this list were scoped to section 7c and
+understated both the reach and the costs; the numbers below are the final ones.
+
+- **This is not evasion.** The best in-budget configuration reaches soft-min
+  0.463 across all 15 voices. Most of those clips would still be caught by a
+  detector making a hard call at 0.5. It is a large *relative* improvement.
+  Clearing 0.5 on 14 of 15 voices is reachable (0.800) but costs -0.85 PESQ,
+  well outside the quality budget.
+- **The student is far from the teacher on unseen voices.** Recovery is 79%
+  on trained voices but **45% on held-out ones** (7l). The "97%" figure that
+  appeared in 7h was measured on training voices only. More than half the
+  available gain on new speakers is unclaimed, which makes adding voices to
+  the dataset the largest measured lever remaining.
+- **Pass count is a quality dial, not a free setting.** Four passes cost
+  nothing measurable; ten cost -0.22 PESQ (t = -4.60); fourteen cost -0.85.
+- **Far transfer is untested.** Every result here is established for the
+  AASIST / AASIST-L / RawNet2 / RawGAT-ST families only. Two separately
+  trained variants of a *single* architecture differed by more than 3x in how
+  much of the edit transferred (7k), which is a direct warning against
+  assuming any unseen detector behaves like these. The LFCC-LCNN far-transfer
+  test remains the right next check and has not been run.
+- **Long-form results are the teacher's, not a learned operator's.** 7r shows
+  +0.427 soft-min at 78 s under the global-file objective, but no distillation
+  corpus has been collected at that length and no network reaches it in a
+  forward pass. 7e's learned-operator result at length still stands.
+- **202-268 training targets is small.** The capacity sweep is monotone all
+  the way down, which usually means more data would help more than more model.
+- **Statistical caution earned the hard way.** Three separate prosody effects
+  in 7f-7g halved each time the sample doubled. Anything here at n < 30 should
+  be read as suggestive; the load-bearing results are at n >= 60.
 
 ---
 
@@ -1282,4 +1304,29 @@ python collect_pgd.py --max-hours 3.3                 # section 7 dataset
 python distill.py --run-id final --dilations 1 --hidden 24     --weight-decay 1e-3 --lr 1e-4 --input-noise 0.15 --max-hours 0.5
 python eval_final.py --distill-run distill_final      # held-out evaluation
 python plot_distill.py --run distill_final --control -0.155   # figures 9-12
+
+python probe_amplify.py                               # 7b, figure 13
+python probe_transfer.py                              # 7k
+python probe_gap.py                                   # 7l, the 45%/79% split
+python analyze_voices.py                              # 7l, figure 14
+python probe_objective.py                             # 7m, the saturation finding
+```
+
+The margin objective (7m onward) is the current best configuration:
+
+```bash
+python collect_pgd.py --objective margin --margin-mode softmin --voices all     --measure-wer                                     # 268 targets, all 15 voices
+python distill.py --run-id margin_final --objective margin --hidden 24
+python eval_all15.py --new-run margin_final --new-iters 4   # headline number
+python plot_margin.py                                 # figures 15, 16
+```
+
+Perceptual training and long form (7q, 7r):
+
+```bash
+python train_direct.py --penalty mrstft+mask --pen-target 0.35 --beta 50
+python plot_frontier.py                               # figure 17
+python longform.py --lengths xlong --steps 40 --tag longform_xlong
+python plot_longform.py                               # figure 18
+python collect_graphs.py                              # refresh graphs/INDEX.md
 ```
