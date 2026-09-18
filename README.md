@@ -103,11 +103,12 @@ points**, both inside a -0.30 PESQ budget:
 
 | | unedited | probability model x10 | margin model x4 |
 |---|---|---|---|
-| soft-min | 0.276 | **0.489** | 0.463 |
-| d PESQ | — | -0.28 | **-0.18** |
-| soft-min per PESQ point | — | 0.76 | **1.04** |
-| similarity | 0.819 | 0.823 | 0.824 |
-| WER | 3.6% | 4.8% | 3.9% |
+| soft-min | 0.276 | **0.489** | 0.454 |
+| d PESQ | — | -0.28 | **-0.17** |
+| soft-min per PESQ point | — | 0.76 | **1.03** |
+| similarity | 0.819 | 0.823 | 0.821 |
+| WER | 3.6% | 4.8% | 5.3% |
+| parameters | — | 21,352 | 21,352 |
 
 The first scores higher; the second is cheaper and more efficient. Prefer the
 margin model when audio quality is the binding constraint, and the default when
