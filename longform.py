@@ -65,7 +65,10 @@ from train_ppo_mel import load_voice
 RL = RESULTS_ROOT / "rl_runs"
 LENGTHS = {"short": " ".join(EVAL_TEXTS[:1]),
            "medium": " ".join(EVAL_TEXTS[:3]),
-           "long": " ".join(EVAL_TEXTS * 2)}
+           "long": " ".join(EVAL_TEXTS * 2),
+           # ~72 s -- the exact length at which section 7e recorded the gain
+           # vanishing. This is the case the global objective has to answer.
+           "xlong": " ".join(EVAL_TEXTS * 3)}
 
 
 def global_weights(mels, deltas, hift, device, k=1.0):
@@ -84,6 +87,7 @@ def global_weights(mels, deltas, hift, device, k=1.0):
 
 def attack(mels, hift, device, steps, max_delta, lr, beta, pen_target,
            refresh=5):
+    skipped = [0]
     raws = [torch.zeros_like(m, requires_grad=True) for m in mels]
     opt = torch.optim.Adam(raws, lr=lr)
     names, w, sm0, _ = global_weights(
@@ -121,7 +125,10 @@ def attack(mels, hift, device, steps, max_delta, lr, beta, pen_target,
                 loss = -obj + beta * torch.clamp(pen - pen_target, min=0).pow(2)
                 loss.backward()
           except torch.cuda.OutOfMemoryError:
-            # skip this chunk for this step rather than losing the whole clip
+            # Skip this chunk for this step rather than losing the whole clip.
+            # COUNT it: a run where this fires often is optimising a fraction
+            # of the file, and its numbers do not mean what they claim.
+            skipped[0] += 1
             torch.cuda.empty_cache()
             continue
           finally:
@@ -132,7 +139,8 @@ def attack(mels, hift, device, steps, max_delta, lr, beta, pen_target,
             torch.cuda.empty_cache()
 
     with torch.no_grad():
-        return [(max_delta * torch.tanh(r)).detach() for r in raws], traj
+        return ([(max_delta * torch.tanh(r)).detach() for r in raws], traj,
+                skipped[0] / max(1, steps * len(mels)))
 
 
 def main() -> int:
@@ -147,6 +155,9 @@ def main() -> int:
     ap.add_argument("--device", default=None)
     ap.add_argument("--seed", type=int, default=99)
     ap.add_argument("--keep-wavs", action="store_true")
+    # separate output per run: the fixed filename silently overwrote an
+    # earlier run's results once already
+    ap.add_argument("--tag", default="longform_attack")
     args = ap.parse_args()
 
     device = args.device or ("cuda" if torch.cuda.is_available() else "cpu")
@@ -178,8 +189,9 @@ def main() -> int:
             if not mels:
                 continue
 
-            deltas, traj = attack(mels, hift, device, args.steps, args.max_delta,
-                                  args.lr, args.beta, args.pen_target)
+            deltas, traj, skip_frac = attack(mels, hift, device, args.steps,
+                                             args.max_delta, args.lr, args.beta,
+                                             args.pen_target)
             with torch.no_grad(), diffscore.differentiable():
                 wavs = [hift(m + d)[0].squeeze(0).squeeze(0)
                         for m, d in zip(mels, deltas)]
@@ -202,12 +214,18 @@ def main() -> int:
             rows.append({"voice": voice, "length": length, "chunks": len(mels),
                          "seconds": float(full.shape[-1] / cosy.sample_rate),
                          "base": b, "attacked": a, "traj": traj,
+                         "skip_frac": skip_frac,
                          "delta_abs": float(np.mean([d.abs().mean().item()
                                                      for d in deltas]))})
             print(f"  {voice:<12}{length:<8}{len(mels)} chunks "
                   f"{rows[-1]['seconds']:.0f}s   soft-min {b['softmin']:.3f} -> "
                   f"{a['softmin']:.3f}   PESQ {b['pesq']:.2f} -> {a['pesq']:.2f}   "
-                  f"sim {b['sim']:.3f} -> {a['sim']:.3f}", flush=True)
+                  f"sim {b['sim']:.3f} -> {a['sim']:.3f}"
+                  + (f"   OOM-SKIPPED {skip_frac:.0%}" if skip_frac else ""),
+                  flush=True)
+            (RL / f"{args.tag}.json").write_text(
+                json.dumps({"summary": [], "rows": rows}, indent=2),
+                encoding="utf8")
             if not args.keep_wavs:
                 base_p.unlink(missing_ok=True)
                 adv_p.unlink(missing_ok=True)
@@ -238,7 +256,7 @@ def main() -> int:
               f"{rec['attacked'] - rec['base']:>+8.3f}{rec['d_pesq']:>+9.2f}"
               f"{rec['d_sim']:>+8.3f}")
 
-    out = RL / "longform_attack.json"
+    out = RL / f"{args.tag}.json"
     out.write_text(json.dumps({"summary": summary, "rows": rows}, indent=2),
                    encoding="utf8")
     print(f"\nwrote {out}")

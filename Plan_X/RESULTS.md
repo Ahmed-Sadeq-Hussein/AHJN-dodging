@@ -1206,6 +1206,11 @@ length, which is what OOM'd before.
 | medium | 13 s | 1 | 0.174 -> **0.946** | **+0.771** | **-0.10** | +0.011 |
 | long | 50 s | 3 | 0.263 -> **0.668** | **+0.405** | -0.33 | +0.010 |
 
+Those means hide a wide spread at 50 s -- thresh 0.233 -> 0.779, Tywin_2
+0.541 -> 0.831, swain 0.169 -> 0.707, but riven only 0.109 -> 0.354. Three of
+four clear the 0.5 bar; one does not. At 13 s all four land between 0.878 and
+1.000, so the difficulty is length, not voice.
+
 At 13 s that is near-total evasion for almost no quality cost, and similarity
 *improves* on both. Against section 7e's per-chunk gains (+0.164 medium,
 +0.004 long) the difference is entirely in what was optimised, not in the
