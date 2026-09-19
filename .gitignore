@@ -21,6 +21,11 @@ __pycache__/
 # derived record of the figures and is kept deliberately.
 *.jsonl
 
+# the listening-test corpus is generated audio (~27 MB) plus a page built from
+# it. mos_test.py, mos_app_template.html and mos_build_app.py rebuild the whole
+# folder, so the folder itself does not belong in git.
+/MOS TEST/
+
 # model checkpoints and PGD datasets live in RESULTS_ROOT; never commit them
 *.pt
 *.pth
