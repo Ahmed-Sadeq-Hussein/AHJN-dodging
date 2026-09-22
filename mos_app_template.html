@@ -126,6 +126,16 @@
   @media (prefers-color-scheme:light){:root:not([data-theme="dark"]) .dot.sel{color:#fff}}
   .hint{font-size:11.5px; color:var(--ink-3); min-width:92px}
 
+  .glitch{flex-basis:100%}
+  .q{font-size:13px; color:var(--ink-2)}
+  .yn{display:flex; gap:4px}
+  .pill{height:31px; min-width:52px; padding:0 12px; border-radius:7px;
+    border:1px solid var(--line); background:var(--surface-2); color:var(--ink-2);
+    font-size:13px; font-weight:600; transition:.1s}
+  .pill:hover{border-color:var(--ink-3)}
+  .pill.yes.sel{background:var(--warn); border-color:var(--warn); color:var(--surface)}
+  .pill.no.sel{background:var(--good); border-color:var(--good); color:var(--surface)}
+
   .play{width:34px; height:34px; border-radius:50%; border:1px solid var(--line);
     background:var(--surface); display:grid; place-items:center; flex:none; transition:.12s}
   .play:hover{border-color:var(--accent); color:var(--accent)}
@@ -370,6 +380,31 @@ function render(){
       }
       rates.appendChild(g);
     }
+
+    const gg = document.createElement("div");
+    gg.className = "rgroup glitch";
+    const gl = document.createElement("span");
+    gl.className = "rlabel";
+    gl.textContent = "Glitch";
+    gg.appendChild(gl);
+    const q = document.createElement("span");
+    q.className = "q";
+    q.textContent = "Is there static or audible glitches in the voice?";
+    gg.appendChild(q);
+    const yn = document.createElement("div");
+    yn.className = "yn";
+    for (const [val, text] of [[true, "Yes"], [false, "No"]]){
+      const b = document.createElement("button");
+      b.className = "pill " + (val ? "yes" : "no") + (cur.glitch === val ? " sel" : "");
+      b.textContent = text;
+      b.setAttribute("aria-pressed", cur.glitch === val ? "true" : "false");
+      b.setAttribute("aria-label", "Static or audible glitches: " + text);
+      b.addEventListener("click", () => setRating(v, arm, "glitch", val));
+      yn.appendChild(b);
+    }
+    gg.appendChild(yn);
+    rates.appendChild(gg);
+
     row.appendChild(rates);
     st.appendChild(row);
   });
@@ -385,12 +420,14 @@ function setRating(v, arm, kind, n){
   const r = ratings[k] = Object.assign({}, ratings[k]);
   r[kind] = r[kind] === n ? null : n;
   if (r[kind] == null) delete r[kind];
-  if (!r.mos && !r.pmos) delete ratings[k]; else ratings[k] = r;
+  // "No glitches" is false, so emptiness is checked with == null, not truthiness
+  if (isEmpty(r)) delete ratings[k]; else ratings[k] = r;
   save(v, arm, ratings[k] || {});
   render();
 }
 
 /* ---------- persistence ---------- */
+const isEmpty = r => r.mos == null && r.pmos == null && r.glitch == null;
 const queue = {};
 async function save(v, arm, r){
   if (!db) { try { localStorage.setItem("ratings", JSON.stringify(ratings)); } catch {} return; }
@@ -402,9 +439,9 @@ async function save(v, arm, r){
     while (queue[k]){
       const body = queue[k]; delete queue[k];
       const doc = db.doc("ratings/" + k);
-      if (!body.mos && !body.pmos) await doc.delete();
-      else await doc.set({voice:v, arm:arm, mos:body.mos||null, pmos:body.pmos||null,
-                          updatedAt:new Date().toISOString()});
+      if (isEmpty(body)) await doc.delete();
+      else await doc.set({voice:v, arm:arm, mos:body.mos ?? null, pmos:body.pmos ?? null,
+                          glitch:body.glitch ?? null, updatedAt:new Date().toISOString()});
     }
   } catch(e){
     setSave("could not save — " + (e && e.code ? e.code : "error"));
@@ -426,19 +463,23 @@ function results(){
     const cs = VOICES.map(v => clipsByVoice[v].find(c=>c.arm===arm)).filter(Boolean);
     const avg = a => a.length ? a.reduce((x,y)=>x+y,0)/a.length : null;
     const m = k => avg(cs.map(c=>c[k]).filter(x=>x!=null));
-    return {arm, n:rs.length, mos:avg(mos), pmos:avg(pmos),
+    const answered = rs.filter(r => typeof r.glitch === "boolean");
+    const glitch = answered.length
+      ? answered.filter(r => r.glitch).length + " / " + answered.length : null;
+    return {arm, n:rs.length, mos:avg(mos), pmos:avg(pmos), glitch,
             softmin:m("softmin"), sim:m("sim"), pesq:m("pesq")};
   });
   const any = rows.some(r => r.n > 0);
   const f = n => n == null ? "&mdash;" : n.toFixed(2);
   tab.innerHTML =
     "<thead><tr><th>Configuration</th><th>Rated</th><th>MOS</th><th>PMOS</th>" +
-    "<th>Soft-min</th><th>Similarity</th><th>PESQ</th></tr></thead><tbody>" +
+    "<th>Glitchy</th><th>Soft-min</th><th>Similarity</th><th>PESQ</th></tr></thead><tbody>" +
     rows.map(r => {
       const meta = ARMS[r.arm] || {label:r.arm, color:"var(--ink-3)"};
       return "<tr><td class='name'><span class='swatch' style='background:" + meta.color +
         "'></span>" + esc(blind ? "Configuration " + (ARM_ORDER.indexOf(r.arm)+1) : meta.label) + "</td>" +
         "<td>" + r.n + "</td><td>" + f(r.mos) + "</td><td>" + f(r.pmos) + "</td>" +
+        "<td>" + (r.glitch ?? "&mdash;") + "</td>" +
         "<td>" + f(r.softmin) + "</td><td>" + f(r.sim) + "</td><td>" + f(r.pesq) + "</td></tr>";
     }).join("") + "</tbody>";
   document.getElementById("ressub").textContent = any
@@ -451,10 +492,12 @@ async function exportJSON(){
   const payload = {
     exportedAt: new Date().toISOString(),
     text: DATA.text, seed: DATA.seed, arms: DATA.arms,
-    scales: {mos:"1-5, how human it sounds", pmos:"1-5, how much it still sounds like the character"},
+    scales: {mos:"1-5, how human it sounds", pmos:"1-5, how much it still sounds like the character",
+             glitch:"true/false, is there static or audible glitches in the voice (null = unanswered)"},
     ratings: Object.entries(ratings).map(([k,r]) => {
       const i = k.lastIndexOf("__");
-      return {voice:k.slice(0,i), arm:k.slice(i+2), mos:r.mos||null, pmos:r.pmos||null};
+      return {voice:k.slice(0,i), arm:k.slice(i+2), mos:r.mos ?? null, pmos:r.pmos ?? null,
+              glitch:r.glitch ?? null};
     }),
     clips: DATA.clips,
   };
@@ -475,6 +518,8 @@ document.getElementById("foot").innerHTML =
   "Scales follow ITU-T P.800: 1 bad, 2 poor, 3 fair, 4 good, 5 excellent. " +
   "<strong>MOS</strong> is naturalness alone &mdash; ignore whether it matches the character. " +
   "<strong>PMOS</strong> is identity alone &mdash; ignore whether it sounds synthetic. " +
+  "<strong>Glitch</strong> asks only about artefacts &mdash; static, clicks, buzz, dropouts &mdash; " +
+  "and is worth checking against the original, since some recordings carry processing of their own. " +
   "Blind mode hides which configuration each clip came from and shuffles their order per voice, " +
   "so nothing primes you; turn it off to see the labels and the objective metrics. " +
   "<span class='savestate'></span>";
@@ -510,7 +555,8 @@ render();
         const r = {};
         if (b.mos) r.mos = b.mos;
         if (b.pmos) r.pmos = b.pmos;
-        if (r.mos || r.pmos) ratings[d.id] = r;
+        if (typeof b.glitch === "boolean") r.glitch = b.glitch;
+        if (!isEmpty(r)) ratings[d.id] = r;
       });
       setSave("saved");
       render();
