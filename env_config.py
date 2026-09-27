@@ -65,3 +65,19 @@ CAMPPLUS_ONNX      = _optional(
     "CAMPPLUS_ONNX_PATH",
     VOICE_CLONING_ROOT / "models" / "CosyVoice2-0.5B" / "campplus.onnx",
 )
+
+# The RL reward (reward.py) needs the four anti-spoofing detectors, which only
+# import under the "voicefake" env's torch/numpy pins -- incompatible with the
+# "voiceclone" env the policy/CosyVoice2/reward loop itself runs under (see
+# requirements.txt's header comment). So detector scoring happens in a
+# subprocess: reward.py shells out to this interpreter running
+# `detectors.py --json`. Not required by any script except reward.py, so it's
+# optional here and only raises when reward.py actually tries to use it.
+VOICEFAKE_PYTHON = os.environ.get("VOICEFAKE_PYTHON")
+
+# Every figure this project produces lands here, so they are all in one place
+# and survive independently of whichever script drew them. Lives in the repo
+# (not RESULTS_ROOT) because the figures are small, reviewable, and worth
+# keeping under version control alongside the write-up that cites them.
+GRAPHS_DIR = _optional("GRAPHS_DIR", THIS_DIR / "graphs")
+GRAPHS_DIR.mkdir(parents=True, exist_ok=True)

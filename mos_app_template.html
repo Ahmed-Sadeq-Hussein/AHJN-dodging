@@ -1,0 +1,566 @@
+<title>Voice Listening Test</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:ital,wght@0,400;1,400&display=swap">
+<style>
+  :root{
+    --ground:#f4f3f0; --surface:#ffffff; --surface-2:#faf9f7;
+    --ink:#191c22; --ink-2:#5a6070; --ink-3:#878d9c;
+    --line:#e0dcd4; --line-2:#efece6;
+    --grey:#8a8f98; --teal:#2a9d8f; --indigo:#4a5fc1; --amber:#e07a1f;
+    --accent:#4a5fc1; --accent-soft:#eceefb;
+    --good:#2a9d8f; --warn:#e07a1f;
+    --shadow:0 1px 2px rgba(25,28,34,.06), 0 6px 18px rgba(25,28,34,.05);
+    --radius:10px;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --ground:#131519; --surface:#1b1e24; --surface-2:#20242b;
+      --ink:#e8e6e1; --ink-2:#a2a8b5; --ink-3:#767d8c;
+      --line:#2c3038; --line-2:#242830;
+      --accent:#8c9bf0; --accent-soft:#242a44;
+      --grey:#9aa0aa; --teal:#3fb8a8; --indigo:#8c9bf0; --amber:#f0932f;
+      --good:#3fb8a8; --warn:#f0932f;
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.28);
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#131519; --surface:#1b1e24; --surface-2:#20242b;
+    --ink:#e8e6e1; --ink-2:#a2a8b5; --ink-3:#767d8c;
+    --line:#2c3038; --line-2:#242830;
+    --accent:#8c9bf0; --accent-soft:#242a44;
+    --grey:#9aa0aa; --teal:#3fb8a8; --indigo:#8c9bf0; --amber:#f0932f;
+    --good:#3fb8a8; --warn:#f0932f;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.28);
+  }
+  html,body{height:100%}
+  body{
+    background:var(--ground); color:var(--ink);
+    font-family:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+    font-size:15px; line-height:1.5; margin:0;
+  }
+  .wrap{max-width:940px; margin:0 auto; padding-inline:16px; padding-block:0 56px}
+
+  /* ---- header ---- */
+  header.bar{
+    position:sticky; top:env(safe-area-inset-top,0px); z-index:20;
+    background:color-mix(in srgb, var(--ground) 88%, transparent);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line);
+  }
+  .bar-in{max-width:940px; margin:0 auto; padding:12px 16px;
+    display:flex; align-items:center; gap:14px; flex-wrap:wrap}
+  .brand{font-weight:700; letter-spacing:-.02em; font-size:16px; margin-right:auto}
+  .brand span{color:var(--ink-3); font-weight:500}
+  .prog{font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:12px;
+    color:var(--ink-2); font-variant-numeric:tabular-nums; white-space:nowrap}
+  .progbar{height:4px; background:var(--line-2); border-radius:99px; overflow:hidden;
+    width:120px; flex:none}
+  .progbar i{display:block; height:100%; background:var(--accent); width:0; transition:width .25s}
+
+  button{font:inherit; color:inherit; cursor:pointer}
+  .btn{
+    border:1px solid var(--line); background:var(--surface); color:var(--ink);
+    border-radius:8px; padding:7px 12px; font-size:13px; font-weight:500;
+    display:inline-flex; align-items:center; gap:7px; transition:.12s;
+  }
+  .btn:hover{border-color:var(--ink-3)}
+  .btn:focus-visible,[tabindex]:focus-visible,input:focus-visible{
+    outline:2px solid var(--accent); outline-offset:2px}
+  .btn.on{background:var(--accent-soft); border-color:var(--accent); color:var(--accent)}
+  .btn.ghost{background:transparent}
+
+  /* ---- intro ---- */
+  .intro{margin:26px 0 22px}
+  h1{font-size:clamp(25px,4.4vw,34px); line-height:1.15; letter-spacing:-.025em;
+    margin:0 0 10px; text-wrap:balance; font-weight:700}
+  .lede{color:var(--ink-2); max-width:62ch; margin:0}
+  .line{
+    font-family:"IBM Plex Serif",Georgia,serif; font-size:17px; line-height:1.55;
+    background:var(--surface); border:1px solid var(--line);
+    border-left:3px solid var(--accent);
+    border-radius:0 var(--radius) var(--radius) 0;
+    padding:13px 16px; margin:18px 0 0; color:var(--ink);
+  }
+  .line b{display:block; font-family:"IBM Plex Mono",monospace; font-size:10.5px;
+    letter-spacing:.09em; text-transform:uppercase; color:var(--ink-3);
+    font-weight:500; margin-bottom:5px}
+
+  /* ---- station ---- */
+  .station{background:var(--surface); border:1px solid var(--line);
+    border-radius:var(--radius); box-shadow:var(--shadow); margin-top:20px; overflow:hidden}
+  .st-head{display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+    padding:14px 16px; border-bottom:1px solid var(--line-2); background:var(--surface-2)}
+  .voice{font-size:19px; font-weight:600; letter-spacing:-.01em}
+  .vcount{font-family:"IBM Plex Mono",monospace; font-size:11.5px; color:var(--ink-3);
+    font-variant-numeric:tabular-nums}
+  .nav{margin-left:auto; display:flex; gap:7px}
+
+  .refrow{display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+    padding:13px 16px; background:var(--accent-soft);
+    border-bottom:1px solid var(--line-2)}
+  .refrow .tag{font-family:"IBM Plex Mono",monospace; font-size:10.5px;
+    letter-spacing:.08em; text-transform:uppercase; color:var(--accent); font-weight:600}
+  .refrow .what{color:var(--ink-2); font-size:13px}
+
+  .clip{padding:14px 16px; border-bottom:1px solid var(--line-2)}
+  .clip:last-child{border-bottom:0}
+  .clip-top{display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .swatch{width:9px; height:9px; border-radius:2px; flex:none}
+  .armname{font-weight:600; font-size:14px}
+  .armwhat{color:var(--ink-3); font-size:12px}
+  .scores{margin-left:auto; display:flex; gap:12px; flex-wrap:wrap;
+    font-family:"IBM Plex Mono",monospace; font-size:11.5px; color:var(--ink-2);
+    font-variant-numeric:tabular-nums}
+  .scores i{font-style:normal; color:var(--ink-3)}
+
+  .rates{display:flex; gap:22px; flex-wrap:wrap; margin-top:11px}
+  .rgroup{display:flex; align-items:center; gap:9px; flex-wrap:wrap}
+  .rlabel{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.06em;
+    text-transform:uppercase; color:var(--ink-3); font-weight:500; min-width:46px}
+  .scale{display:flex; gap:4px}
+  .dot{width:31px; height:31px; border-radius:7px; border:1px solid var(--line);
+    background:var(--surface-2); color:var(--ink-2); font-size:13px; font-weight:600;
+    font-family:"IBM Plex Mono",monospace; display:grid; place-items:center; transition:.1s}
+  .dot:hover{border-color:var(--ink-3)}
+  .dot.sel{background:var(--accent); border-color:var(--accent); color:#fff}
+  :root[data-theme="dark"] .dot.sel, :root:not([data-theme="light"]) .dot.sel{color:#14161b}
+  @media (prefers-color-scheme:light){:root:not([data-theme="dark"]) .dot.sel{color:#fff}}
+  .hint{font-size:11.5px; color:var(--ink-3); min-width:92px}
+
+  .glitch{flex-basis:100%}
+  .q{font-size:13px; color:var(--ink-2)}
+  .yn{display:flex; gap:4px}
+  .pill{height:31px; min-width:52px; padding:0 12px; border-radius:7px;
+    border:1px solid var(--line); background:var(--surface-2); color:var(--ink-2);
+    font-size:13px; font-weight:600; transition:.1s}
+  .pill:hover{border-color:var(--ink-3)}
+  .pill.yes.sel{background:var(--warn); border-color:var(--warn); color:var(--surface)}
+  .pill.no.sel{background:var(--good); border-color:var(--good); color:var(--surface)}
+
+  .play{width:34px; height:34px; border-radius:50%; border:1px solid var(--line);
+    background:var(--surface); display:grid; place-items:center; flex:none; transition:.12s}
+  .play:hover{border-color:var(--accent); color:var(--accent)}
+  .play.playing{background:var(--accent); border-color:var(--accent); color:#fff}
+  .play svg{width:13px; height:13px; fill:currentColor; display:block}
+
+  /* ---- results ---- */
+  .panel{background:var(--surface); border:1px solid var(--line);
+    border-radius:var(--radius); box-shadow:var(--shadow); margin-top:20px; padding:16px}
+  h2{font-size:17px; font-weight:600; letter-spacing:-.015em; margin:0 0 4px}
+  .sub{color:var(--ink-2); font-size:13px; margin:0 0 14px; max-width:62ch}
+  .tablewrap{overflow-x:auto}
+  table{border-collapse:collapse; width:100%; font-size:13px; min-width:560px}
+  th,td{text-align:right; padding:8px 10px; border-bottom:1px solid var(--line-2);
+    font-variant-numeric:tabular-nums; font-family:"IBM Plex Mono",monospace}
+  th:first-child,td:first-child{text-align:left; font-family:"IBM Plex Sans",sans-serif}
+  th{font-size:10.5px; letter-spacing:.07em; text-transform:uppercase;
+    color:var(--ink-3); font-weight:600; border-bottom:1px solid var(--line)}
+  td.name{font-weight:600; display:flex; align-items:center; gap:8px}
+  .empty{color:var(--ink-3); font-size:13px; padding:10px 0}
+  .foot{margin-top:24px; color:var(--ink-3); font-size:12px; line-height:1.6}
+  .foot code{font-family:"IBM Plex Mono",monospace; font-size:11.5px}
+  .savestate{font-family:"IBM Plex Mono",monospace; font-size:11px; color:var(--ink-3)}
+  @media (max-width:560px){
+    .scores{width:100%; margin-left:0}
+    .rates{gap:12px}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<header class="bar">
+  <div class="bar-in">
+    <div class="brand">Listening Test <span>/ MOS &amp; PMOS</span></div>
+    <div class="progbar"><i id="pfill"></i></div>
+    <div class="prog" id="ptext">0 / 0 rated</div>
+    <button class="btn" id="blind">Blind: on</button>
+    <button class="btn ghost" id="export">Export</button>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="intro">
+    <h1>Rate every voice on how human it sounds &mdash; and how much it still sounds like the character</h1>
+    <p class="lede">Each voice was cloned once, then rendered four times through the mel-edit operators this project produced. <strong>All four share one seed</strong>, so the speech tokens and vocoder noise are identical and the only difference you can hear is the edit itself.</p>
+    <p class="line"><b>The line, spoken by every clip</b><span id="theline"></span></p>
+  </div>
+
+  <div id="station"></div>
+
+  <div class="panel">
+    <h2>Your ratings so far</h2>
+    <p class="sub" id="ressub">Mean opinion scores you have given, against what the detectors and objective metrics say about the same clips.</p>
+    <div class="tablewrap"><table id="restab"></table></div>
+  </div>
+
+  <p class="foot" id="foot"></p>
+</div>
+
+<script>
+const DATA = /*__DATA__*/{};
+
+/* ---------- arm presentation ---------- */
+const ARMS = {
+  baseline:        {label:"Unedited",       color:"var(--grey)",   note:"straight CosyVoice2 clone, no edit"},
+  probability_x10: {label:"Probability x10",color:"var(--teal)",   note:"first working operator, 10 passes"},
+  margin_x4:       {label:"Margin x4",      color:"var(--indigo)", note:"recommended configuration"},
+  margin_x14:      {label:"Margin x14",     color:"var(--amber)",  note:"pushed past the quality budget"},
+};
+const ARM_ORDER = Object.keys(ARMS).filter(a => DATA.arms && DATA.arms[a]);
+const MOS_HINT  = ["","clearly synthetic","noticeably off","acceptable","natural","indistinguishable from a person"];
+const PMOS_HINT = ["","a different person","barely them","somewhat them","clearly them","the same performer"];
+
+const clipsByVoice = {};
+const refByVoice = {};
+for (const c of (DATA.clips || [])) {
+  if (c.arm === "reference") { refByVoice[c.voice] = c; continue; }
+  (clipsByVoice[c.voice] = clipsByVoice[c.voice] || []).push(c);
+}
+const VOICES = Object.keys(clipsByVoice).sort((a,b)=>a.toLowerCase().localeCompare(b.toLowerCase()));
+const TOTAL = VOICES.reduce((n,v)=>n+clipsByVoice[v].length, 0);
+
+/* deterministic per-voice shuffle so blind order is stable across reloads */
+function shuffled(voice, arms){
+  let h = 0; for (const ch of voice) h = (h*31 + ch.charCodeAt(0)) >>> 0;
+  const a = arms.slice();
+  for (let i=a.length-1; i>0; i--){ h = (h*1664525 + 1013904223) >>> 0;
+    const j = h % (i+1); [a[i],a[j]] = [a[j],a[i]]; }
+  return a;
+}
+
+/* ---------- state ---------- */
+const ratings = {};                    // "voice__arm" -> {mos,pmos}
+let vi = 0, blind = true, db = null, downloads = null;
+const key = (v,a) => v + "__" + a;
+
+try { const s = localStorage.getItem("blind"); if (s !== null) blind = s === "1"; } catch {}
+
+/* ---------- audio ---------- */
+let current = null;
+function play(src, btn){
+  if (current && current.btn === btn){ stop(); return; }
+  stop();
+  const el = new Audio(src);
+  current = {el, btn};
+  btn.classList.add("playing");
+  el.addEventListener("ended", stop);
+  el.addEventListener("error", () => { btn.classList.remove("playing"); current = null; });
+  el.play().catch(() => { btn.classList.remove("playing"); current = null; });
+}
+function stop(){
+  if (!current) return;
+  current.el.pause();
+  current.btn.classList.remove("playing");
+  current = null;
+}
+const PLAY_SVG = '<svg viewBox="0 0 12 14" aria-hidden="true"><path d="M1 1l10 6-10 6z"/></svg>';
+const STOP_SVG = '<svg viewBox="0 0 12 14" aria-hidden="true"><rect x="1.5" y="2" width="9" height="10" rx="1"/></svg>';
+
+/* ---------- render ---------- */
+function esc(s){ return String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+function render(){
+  const v = VOICES[vi];
+  const ref = refByVoice[v];
+  const arms = blind ? shuffled(v, ARM_ORDER) : ARM_ORDER;
+  const done = VOICES.reduce((n,vv)=>n + clipsByVoice[vv].filter(c=>ratings[key(vv,c.arm)]).length, 0);
+
+  document.getElementById("ptext").textContent = done + " / " + TOTAL + " rated";
+  document.getElementById("pfill").style.width = (TOTAL ? done/TOTAL*100 : 0) + "%";
+  document.getElementById("blind").textContent = "Blind: " + (blind ? "on" : "off");
+  document.getElementById("blind").classList.toggle("on", blind);
+
+  const el = document.getElementById("station");
+  el.innerHTML = "";
+
+  const st = document.createElement("div");
+  st.className = "station";
+
+  const head = document.createElement("div");
+  head.className = "st-head";
+  head.innerHTML =
+    '<div class="voice">' + esc(v) + '</div>' +
+    '<div class="vcount">voice ' + (vi+1) + ' of ' + VOICES.length + '</div>' +
+    '<div class="nav">' +
+      '<button class="btn" id="prev">&larr; Previous</button>' +
+      '<button class="btn" id="next">Next &rarr;</button>' +
+    '</div>';
+  st.appendChild(head);
+
+  if (ref){
+    const r = document.createElement("div");
+    r.className = "refrow";
+    const b = document.createElement("button");
+    b.className = "play"; b.innerHTML = PLAY_SVG;
+    b.setAttribute("aria-label", "Play the original recording for " + v);
+    b.addEventListener("click", () => play(ref.file, b));
+    r.appendChild(b);
+    const t = document.createElement("div");
+    t.innerHTML = '<div class="tag">Original recording</div>' +
+      '<div class="what">the real clip this voice was cloned from &mdash; your reference for both scores</div>';
+    r.appendChild(t);
+    st.appendChild(r);
+  }
+
+  arms.forEach((arm, idx) => {
+    const c = clipsByVoice[v].find(x => x.arm === arm);
+    if (!c) return;
+    const meta = ARMS[arm] || {label:arm, color:"var(--ink-3)", note:""};
+    const row = document.createElement("div");
+    row.className = "clip";
+
+    const top = document.createElement("div");
+    top.className = "clip-top";
+    const pb = document.createElement("button");
+    pb.className = "play"; pb.innerHTML = PLAY_SVG;
+    pb.setAttribute("aria-label", "Play clip " + (idx+1) + " for " + v);
+    pb.addEventListener("click", () => play(c.file, pb));
+    top.appendChild(pb);
+
+    const name = document.createElement("div");
+    if (blind){
+      name.innerHTML = '<span class="armname">Clip ' + String.fromCharCode(65+idx) + '</span>';
+    } else {
+      name.innerHTML =
+        '<span class="armname"><span class="swatch" style="display:inline-block;background:' +
+        meta.color + '"></span> ' + esc(meta.label) + '</span>' +
+        '<div class="armwhat">' + esc(meta.note) + '</div>';
+    }
+    top.appendChild(name);
+
+    if (!blind){
+      const sc = document.createElement("div");
+      sc.className = "scores";
+      sc.innerHTML =
+        '<span><i>soft-min</i> ' + c.softmin.toFixed(3) + '</span>' +
+        '<span><i>sim</i> ' + (c.sim != null ? c.sim.toFixed(3) : "&mdash;") + '</span>' +
+        '<span><i>WER</i> ' + (c.wer != null ? (c.wer*100).toFixed(0)+"%" : "&mdash;") + '</span>' +
+        '<span><i>PESQ</i> ' + (c.pesq != null ? c.pesq.toFixed(2) : "&mdash;") + '</span>';
+      top.appendChild(sc);
+    }
+    row.appendChild(top);
+
+    const rates = document.createElement("div");
+    rates.className = "rates";
+    const cur = ratings[key(v,arm)] || {};
+    for (const kind of ["mos","pmos"]){
+      const g = document.createElement("div");
+      g.className = "rgroup";
+      const lab = document.createElement("span");
+      lab.className = "rlabel";
+      lab.textContent = kind.toUpperCase();
+      lab.title = kind === "mos" ? "How human does it sound?" : "Does it still sound like the character?";
+      g.appendChild(lab);
+
+      const scale = document.createElement("div");
+      scale.className = "scale";
+      for (let n=1; n<=5; n++){
+        const d = document.createElement("button");
+        d.className = "dot" + (cur[kind] === n ? " sel" : "");
+        d.textContent = n;
+        d.setAttribute("aria-label", kind.toUpperCase() + " " + n + ": " +
+          (kind === "mos" ? MOS_HINT[n] : PMOS_HINT[n]));
+        d.addEventListener("click", () => setRating(v, arm, kind, n));
+        scale.appendChild(d);
+      }
+      g.appendChild(scale);
+
+      const h = document.createElement("span");
+      h.className = "hint";
+      h.textContent = cur[kind] ? (kind === "mos" ? MOS_HINT[cur[kind]] : PMOS_HINT[cur[kind]]) : "";
+      g.appendChild(h);
+
+      if (ref){
+        const rb = document.createElement("button");
+        rb.className = "btn ghost";
+        rb.style.padding = "4px 9px";
+        rb.style.fontSize = "12px";
+        rb.textContent = "original";
+        rb.title = "Play the recording this voice was cloned from";
+        rb.addEventListener("click", () => play(ref.file, rb));
+        g.appendChild(rb);
+      }
+      rates.appendChild(g);
+    }
+
+    const gg = document.createElement("div");
+    gg.className = "rgroup glitch";
+    const gl = document.createElement("span");
+    gl.className = "rlabel";
+    gl.textContent = "Glitch";
+    gg.appendChild(gl);
+    const q = document.createElement("span");
+    q.className = "q";
+    q.textContent = "Is there static or audible glitches in the voice?";
+    gg.appendChild(q);
+    const yn = document.createElement("div");
+    yn.className = "yn";
+    for (const [val, text] of [[true, "Yes"], [false, "No"]]){
+      const b = document.createElement("button");
+      b.className = "pill " + (val ? "yes" : "no") + (cur.glitch === val ? " sel" : "");
+      b.textContent = text;
+      b.setAttribute("aria-pressed", cur.glitch === val ? "true" : "false");
+      b.setAttribute("aria-label", "Static or audible glitches: " + text);
+      b.addEventListener("click", () => setRating(v, arm, "glitch", val));
+      yn.appendChild(b);
+    }
+    gg.appendChild(yn);
+    rates.appendChild(gg);
+
+    row.appendChild(rates);
+    st.appendChild(row);
+  });
+
+  el.appendChild(st);
+  document.getElementById("prev").addEventListener("click", () => { stop(); vi = (vi-1+VOICES.length)%VOICES.length; render(); window.scrollTo({top:0,behavior:"smooth"}); });
+  document.getElementById("next").addEventListener("click", () => { stop(); vi = (vi+1)%VOICES.length; render(); window.scrollTo({top:0,behavior:"smooth"}); });
+  results();
+}
+
+function setRating(v, arm, kind, n){
+  const k = key(v,arm);
+  const r = ratings[k] = Object.assign({}, ratings[k]);
+  r[kind] = r[kind] === n ? null : n;
+  if (r[kind] == null) delete r[kind];
+  // "No glitches" is false, so emptiness is checked with == null, not truthiness
+  if (isEmpty(r)) delete ratings[k]; else ratings[k] = r;
+  save(v, arm, ratings[k] || {});
+  render();
+}
+
+/* ---------- persistence ---------- */
+const isEmpty = r => r.mos == null && r.pmos == null && r.glitch == null;
+const queue = {};
+async function save(v, arm, r){
+  if (!db) { try { localStorage.setItem("ratings", JSON.stringify(ratings)); } catch {} return; }
+  const k = key(v,arm);
+  queue[k] = r;
+  if (queue["_busy_" + k]) return;
+  queue["_busy_" + k] = true;
+  try{
+    while (queue[k]){
+      const body = queue[k]; delete queue[k];
+      const doc = db.doc("ratings/" + k);
+      if (isEmpty(body)) await doc.delete();
+      else await doc.set({voice:v, arm:arm, mos:body.mos ?? null, pmos:body.pmos ?? null,
+                          glitch:body.glitch ?? null, updatedAt:new Date().toISOString()});
+    }
+  } catch(e){
+    setSave("could not save — " + (e && e.code ? e.code : "error"));
+  } finally { delete queue["_busy_" + k]; }
+}
+function setSave(msg){
+  const f = document.getElementById("foot");
+  const s = f.querySelector(".savestate");
+  if (s) s.textContent = msg;
+}
+
+/* ---------- results ---------- */
+function results(){
+  const tab = document.getElementById("restab");
+  const rows = ARM_ORDER.map(arm => {
+    const rs = VOICES.map(v => ratings[key(v,arm)]).filter(Boolean);
+    const mos  = rs.filter(r=>r.mos).map(r=>r.mos);
+    const pmos = rs.filter(r=>r.pmos).map(r=>r.pmos);
+    const cs = VOICES.map(v => clipsByVoice[v].find(c=>c.arm===arm)).filter(Boolean);
+    const avg = a => a.length ? a.reduce((x,y)=>x+y,0)/a.length : null;
+    const m = k => avg(cs.map(c=>c[k]).filter(x=>x!=null));
+    const answered = rs.filter(r => typeof r.glitch === "boolean");
+    const glitch = answered.length
+      ? answered.filter(r => r.glitch).length + " / " + answered.length : null;
+    return {arm, n:rs.length, mos:avg(mos), pmos:avg(pmos), glitch,
+            softmin:m("softmin"), sim:m("sim"), pesq:m("pesq")};
+  });
+  const any = rows.some(r => r.n > 0);
+  const f = n => n == null ? "&mdash;" : n.toFixed(2);
+  tab.innerHTML =
+    "<thead><tr><th>Configuration</th><th>Rated</th><th>MOS</th><th>PMOS</th>" +
+    "<th>Glitchy</th><th>Soft-min</th><th>Similarity</th><th>PESQ</th></tr></thead><tbody>" +
+    rows.map(r => {
+      const meta = ARMS[r.arm] || {label:r.arm, color:"var(--ink-3)"};
+      return "<tr><td class='name'><span class='swatch' style='background:" + meta.color +
+        "'></span>" + esc(blind ? "Configuration " + (ARM_ORDER.indexOf(r.arm)+1) : meta.label) + "</td>" +
+        "<td>" + r.n + "</td><td>" + f(r.mos) + "</td><td>" + f(r.pmos) + "</td>" +
+        "<td>" + (r.glitch ?? "&mdash;") + "</td>" +
+        "<td>" + f(r.softmin) + "</td><td>" + f(r.sim) + "</td><td>" + f(r.pesq) + "</td></tr>";
+    }).join("") + "</tbody>";
+  document.getElementById("ressub").textContent = any
+    ? "Your mean scores next to what the detectors and objective metrics say about the same clips."
+    : "Nothing rated yet. Objective metrics are shown now; your MOS and PMOS averages fill in as you go.";
+}
+
+/* ---------- export ---------- */
+async function exportJSON(){
+  const payload = {
+    exportedAt: new Date().toISOString(),
+    text: DATA.text, seed: DATA.seed, arms: DATA.arms,
+    scales: {mos:"1-5, how human it sounds", pmos:"1-5, how much it still sounds like the character",
+             glitch:"true/false, is there static or audible glitches in the voice (null = unanswered)"},
+    ratings: Object.entries(ratings).map(([k,r]) => {
+      const i = k.lastIndexOf("__");
+      return {voice:k.slice(0,i), arm:k.slice(i+2), mos:r.mos ?? null, pmos:r.pmos ?? null,
+              glitch:r.glitch ?? null};
+    }),
+    clips: DATA.clips,
+  };
+  const text = JSON.stringify(payload, null, 2);
+  if (downloads){
+    try { await downloads.save({filename:"mos_ratings.json", data:text}); return; }
+    catch(e){ /* fall through */ }
+  }
+  try{
+    await navigator.clipboard.writeText(text);
+    setSave("ratings copied to the clipboard as JSON");
+  } catch { setSave("could not export here — ratings are still saved"); }
+}
+
+/* ---------- boot ---------- */
+document.getElementById("theline").textContent = DATA.text || "";
+document.getElementById("foot").innerHTML =
+  "Scales follow ITU-T P.800: 1 bad, 2 poor, 3 fair, 4 good, 5 excellent. " +
+  "<strong>MOS</strong> is naturalness alone &mdash; ignore whether it matches the character. " +
+  "<strong>PMOS</strong> is identity alone &mdash; ignore whether it sounds synthetic. " +
+  "<strong>Glitch</strong> asks only about artefacts &mdash; static, clicks, buzz, dropouts &mdash; " +
+  "and is worth checking against the original, since some recordings carry processing of their own. " +
+  "Blind mode hides which configuration each clip came from and shuffles their order per voice, " +
+  "so nothing primes you; turn it off to see the labels and the objective metrics. " +
+  "<span class='savestate'></span>";
+
+document.getElementById("blind").addEventListener("click", () => {
+  blind = !blind;
+  try { localStorage.setItem("blind", blind ? "1" : "0"); } catch {}
+  render();
+});
+document.getElementById("export").addEventListener("click", exportJSON);
+document.addEventListener("keydown", e => {
+  if (e.target.tagName === "INPUT" || e.metaKey || e.ctrlKey) return;
+  if (e.key === "ArrowRight") document.getElementById("next")?.click();
+  if (e.key === "ArrowLeft")  document.getElementById("prev")?.click();
+  if (e.key === " ") { e.preventDefault(); stop(); }
+});
+
+try{
+  const cached = localStorage.getItem("ratings");
+  if (cached) Object.assign(ratings, JSON.parse(cached));
+} catch {}
+render();
+
+(async () => {
+  db = await window.claude?.use?.("db") ?? null;
+  downloads = await window.claude?.use?.("downloads") ?? null;
+  if (!db){ setSave("saving to this browser only"); return; }
+  try{
+    db.collection("ratings").onSnapshot(snap => {
+      for (const k of Object.keys(ratings)) delete ratings[k];
+      snap.docs.forEach(d => {
+        const b = d.data() || {};
+        const r = {};
+        if (b.mos) r.mos = b.mos;
+        if (b.pmos) r.pmos = b.pmos;
+        if (typeof b.glitch === "boolean") r.glitch = b.glitch;
+        if (!isEmpty(r)) ratings[d.id] = r;
+      });
+      setSave("saved");
+      render();
+    }, err => setSave("not syncing — " + err.code));
+  } catch(e){ setSave("saving to this browser only"); }
+})();
+</script>
