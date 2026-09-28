@@ -61,16 +61,21 @@ def load16(path: Path, device) -> torch.Tensor:
     return wav.to(device)
 
 
-def measure(path: Path, ref_path: Path, device="cuda") -> dict:
-    """PESQ/STOI/SI-SDR estimates plus a MOS estimate for one clip.
+def measure(path: Path, ref_path: Path | None = None, device="cuda") -> dict:
+    """PESQ/STOI/SI-SDR estimates, plus a MOS estimate when a reference is given.
 
-    ref_path supplies the non-matching clean reference SQUIM_SUBJECTIVE
-    needs; the natural choice here is the voice's own reference.wav, which
-    is real recorded speech.
+    PESQ, STOI and SI-SDR come from SQUIM_OBJECTIVE, which needs NO reference
+    -- it estimates them from the degraded signal alone. Only the MOS estimate
+    needs one, and only as a non-matching sample of clean speech for
+    SQUIM_SUBJECTIVE; the natural choice here is the voice's own
+    reference.wav, which is real recorded speech.
+
+    Passing ref_path is therefore optional. Without it you still get the three
+    objective numbers and "mos" is omitted.
     """
     obj_m, subj_m = _models(device)
     wav = load16(Path(path), device)
-    ref = load16(Path(ref_path), device)
+    ref = load16(Path(ref_path), device) if ref_path is not None else None
 
     # SQUIM is trained on utterance-length inputs; very long clips are
     # chunked and averaged rather than truncated, so a 60 s script is not
@@ -88,15 +93,18 @@ def measure(path: Path, ref_path: Path, device="cuda") -> dict:
             # getting it wrong reads a 4.03 PESQ as a 4.03 STOI, which is not
             # even in STOI's range, so the ordering is worth pinning here.
             st, p, sd = obj_m(w)
-            r = ref[:, :w.shape[-1]]
-            if r.shape[-1] < w.shape[-1]:             # tile a short reference
-                reps = int(w.shape[-1] / r.shape[-1]) + 1
-                r = ref.repeat(1, reps)[:, :w.shape[-1]]
-            m = subj_m(w, r)
-            pesq += float(p[0]); stoi += float(st[0])
-            sisdr += float(sd[0]); mos += float(m[0])
+            pesq += float(p[0]); stoi += float(st[0]); sisdr += float(sd[0])
+            if ref is not None:
+                r = ref[:, :w.shape[-1]]
+                if r.shape[-1] < w.shape[-1]:         # tile a short reference
+                    reps = int(w.shape[-1] / r.shape[-1]) + 1
+                    r = ref.repeat(1, reps)[:, :w.shape[-1]]
+                mos += float(subj_m(w, r)[0])
     k = max(len(starts), 1)
-    return {"pesq": pesq / k, "stoi": stoi / k, "si_sdr": sisdr / k, "mos": mos / k}
+    out = {"pesq": pesq / k, "stoi": stoi / k, "si_sdr": sisdr / k}
+    if ref is not None:
+        out["mos"] = mos / k
+    return out
 
 
 def main() -> int:

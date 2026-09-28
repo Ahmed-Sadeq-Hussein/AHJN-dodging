@@ -19,11 +19,11 @@ in demo_best.py survived as long as it did. This is that block, once.
     WER           Tester.py             whisper transcript vs the target text
     perceptual    quality.py            torchaudio SQUIM: PESQ, STOI, SI-SDR
 
-What you get back depends on what you pass in. `reference` unlocks similarity
-and the perceptual metrics (SQUIM's objective mode is intrusive -- it compares
-against a clean signal). `text` unlocks WER. Ask for neither and you get
-detection only, which is the right call when scoring a reference recording:
-its similarity to itself is 1.0 by construction and it has no target text.
+What you get back depends on what you pass in. `text` unlocks WER.
+`reference` unlocks similarity, and a MOS estimate on top of the perceptual
+metrics. PESQ, STOI and SI-SDR need NO reference -- SQUIM_OBJECTIVE estimates
+them from the degraded signal alone -- so they are computed for every clip,
+including a reference recording being scored on its own.
 
 Nothing here raises if a metric cannot be produced. A missing model, a clip
 too short for a detector, a whisper failure -- each leaves its keys absent and
@@ -117,15 +117,16 @@ def score_clip(path, reference=None, text=None, *, device=None,
             out["problems"].append(f"wer: {e}")
 
     # ---- perceptual quality ---------------------------------------------
-    if quality and reference is not None:
+    # No reference needed: SQUIM_OBJECTIVE is reference-free. A reference adds
+    # only the MOS estimate, which SQUIM_SUBJECTIVE wants a non-matching
+    # sample of clean speech for.
+    if quality:
         try:
             import quality as Q
             dev = device or ("cuda" if torch.cuda.is_available() else "cpu")
-            out.update(Q.measure(path, Path(reference), dev))
+            out.update(Q.measure(path, Path(reference) if reference else None, dev))
         except Exception as e:
             out["problems"].append(f"quality: {e}")
-    elif quality and reference is None:
-        out["problems"].append("quality: skipped, it needs a reference")
 
     if not out["problems"]:
         out.pop("problems")
