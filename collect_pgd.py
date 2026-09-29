@@ -45,6 +45,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import cloners
 import detectors as det
 import diffscore
+import perceptual as P
 import Tester
 from env_config import RESULTS_ROOT
 from mel_policy import MelResidualPolicy, mel_edit_hook
@@ -68,7 +69,7 @@ def objective_value(wav24, device, space, names, k, softmin_weight, cap,
 
 def pgd_solve(mel, hift_call, device, steps, max_delta, lr, k, softmin_weight,
               names=None, space="prob", cap=4.0, margin_mode="softmin",
-              margin_k=1.0):
+              margin_k=1.0, penalty_kind=None, pen_target=0.35, beta=50.0):
     """Ascend the detector objective w.r.t. a bounded mel residual.
 
     The bound is structural rather than a projection: delta = max_delta *
@@ -78,23 +79,52 @@ def pgd_solve(mel, hift_call, device, steps, max_delta, lr, k, softmin_weight,
     space="margin" ascends capped logit margins instead of probabilities --
     on hard clips the blocking detectors are saturated at P ~ 1e-6 and the
     probability gradient has effectively vanished (see diffscore).
+
+    penalty_kind turns on a PERCEPTUAL CONSTRAINT on the teacher itself
+    (perceptual.py: "mask", "mrstft", "mrstft+mask"). Without it PGD maximises
+    evasion and nothing else, and section 7j measured what that costs: the
+    teacher's own solutions run -0.64 PESQ, already outside the -0.30 budget
+    the students are held to. Targets were filtered afterwards for similarity
+    and WER but never for audio quality, so the corpus taught the student to
+    make expensive edits and the filter never caught it.
+
+    It is a hinge, not a price: nothing is charged until the penalty passes
+    pen_target, then steeply. Section 7q is the reason -- a weighted price on
+    edit size held for thirty minutes and was then outbid, |delta| drifting
+    0.023 -> 0.19 over three hours, while the same run with a hinge held at
+    0.028 throughout.
+
+    HiFT injects noise, so the clean pass is rendered under the SAME seed as
+    the edited one. Two separate calls differ by 0.059 of STFT distance on
+    their own, which is larger than the penalty being measured.
     """
     raw = torch.zeros_like(mel, requires_grad=True)
     opt = torch.optim.Adam([raw], lr=lr)
-    traj = []
+    traj, pens = [], []
     with diffscore.differentiable():
         for step in range(steps):
             opt.zero_grad()
             delta = max_delta * torch.tanh(raw)
+            seed = torch.randint(0, 2 ** 31 - 1, (1,)).item()
+            torch.manual_seed(seed)
             wav, _ = hift_call(mel + delta)
             obj = objective_value(wav.squeeze(0), device, space, names,
                                   k, softmin_weight, cap, margin_mode, margin_k)
-            (-obj).backward()
+            loss = -obj
+            if penalty_kind:
+                with torch.no_grad():
+                    torch.manual_seed(seed)
+                    clean, _ = hift_call(mel)
+                pen = P.penalty(penalty_kind, delta, mel,
+                                edited_wav=wav, clean_wav=clean)
+                loss = loss + beta * torch.clamp(pen - pen_target, min=0.0).pow(2)
+                pens.append(float(pen))
+            loss.backward()
             opt.step()
             traj.append(float(obj))
     with torch.no_grad():
         delta = max_delta * torch.tanh(raw)
-    return delta.detach(), traj
+    return delta.detach(), traj, (pens[-1] if pens else None)
 
 
 def main() -> int:
@@ -104,6 +134,12 @@ def main() -> int:
                     help="how many texts from TRAIN_TEXTS to use (default: all)")
     ap.add_argument("--steps", type=int, default=60)
     ap.add_argument("--max-delta", type=float, default=0.6)
+    ap.add_argument("--penalty", default=None,
+                    choices=(None, "mask", "mrstft", "mrstft+mask"),
+                    help="constrain the TEACHER perceptually while it solves")
+    ap.add_argument("--pen-target", type=float, default=0.35,
+                    help="the hinge: nothing is charged below this")
+    ap.add_argument("--beta", type=float, default=50.0)
     ap.add_argument("--lr", type=float, default=0.05)
     ap.add_argument("--breathify", action="store_true",
                     help="insert [breath]/[quick_breath] at clause boundaries, "
@@ -163,7 +199,10 @@ def main() -> int:
         print(f"style  : breathified -- e.g. {texts[0]!r}")
     print(f"budget : {args.max_hours} h")
     print(f"objective: {args.objective}"
-          + (f" (cap {args.margin_cap})" if args.objective == "margin" else ""))
+          + (f" (cap {args.margin_cap})" if args.objective == "margin" else "")
+          + (f"   perceptual constraint: {args.penalty} "
+             f"(hinge at {args.pen_target}, beta {args.beta})"
+             if args.penalty else "   perceptual constraint: none"))
     print(f"optimise against : {opt_names}")
     if held_names:
         print(f"HELD OUT         : {held_names}  (scored for reporting, never "
@@ -240,12 +279,14 @@ def main() -> int:
                                              args.margin_mode))
                 sm0 = float(diffscore.soft_min(list(s0.values()), k=args.softmin_k))
 
-            delta, traj = pgd_solve(mel, hift_call, device, args.steps,
+            delta, traj, pen_final = pgd_solve(mel, hift_call, device, args.steps,
                                     args.max_delta, args.lr,
                                     args.softmin_k, args.softmin_weight,
                                     names=opt_names, space=args.objective,
                                     cap=args.margin_cap,
-                                    margin_mode=args.margin_mode)
+                                    margin_mode=args.margin_mode,
+                                    penalty_kind=args.penalty,
+                                    pen_target=args.pen_target, beta=args.beta)
 
             with torch.no_grad(), diffscore.differentiable():
                 w1, _ = hift_call(mel + delta)
@@ -296,6 +337,8 @@ def main() -> int:
                         "softmin_before": sm0, "softmin_after": sm1,
                         "sim_before": sim0, "sim_after": sim1,
                         "delta_abs": float(delta.abs().mean()),
+                        "penalty_kind": args.penalty, "pen_final": pen_final,
+                        "pen_target": args.pen_target,
                         "steps": args.steps, "max_delta": args.max_delta},
                        path)
 
@@ -314,6 +357,7 @@ def main() -> int:
                     "wer_before": wer0, "wer_after": wer1,
                     "objective": args.objective,
                     "delta_abs": float(delta.abs().mean()),
+                    "penalty_kind": args.penalty, "pen_final": pen_final,
                     "frames": int(mel.shape[-1]), "seconds": el}) + "\n")
             print(f"  [{done:>3}] {key:<20} softmin {sm0:.3f} -> {sm1:.3f}  "
                   f"sim {sim0:.3f} -> {sim1:.3f}  |d| {float(delta.abs().mean()):.3f}  "

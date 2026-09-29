@@ -238,6 +238,16 @@ def main() -> int:
                     help="condition the actor on the CAM++ speaker embedding "
                          "(FiLM). Recovery ranges 15-101%% by voice while the "
                          "network cannot currently tell voices apart")
+    ap.add_argument("--match", default=None,
+                    help="restrict to the target files another corpus has, "
+                         "for a like-for-like control")
+    ap.add_argument("--obj-weight", type=float, default=0.0,
+                    help="add the real margin objective to the MSE loss "
+                         "(0 = pure imitation, the original behaviour)")
+    ap.add_argument("--obj-clips", type=int, default=2,
+                    help="clips per batch pushed through HiFT for that term; "
+                         "each one costs a full backward through the vocoder "
+                         "and all four detectors, so keep it small")
     ap.add_argument("--max-wer-cost", type=float, default=0.05,
                     help="drop targets whose WER rose by more than this "
                          "(needs a dataset collected with --measure-wer)")
@@ -257,6 +267,17 @@ def main() -> int:
                  if args.detectors else None)
     data_dir = Path(args.data) if args.data else DATA_ROOT
     files = sorted(data_dir.glob("*.pt"))
+    if args.match:
+        # Train the control on exactly the (voice, sentence) pairs another
+        # corpus holds, so a comparison between two corpora is about how the
+        # targets were made and not about how many there are.
+        keep = {f.name for f in Path(args.match).glob("*.pt")}
+        before = len(files)
+        files = [f for f in files if f.name in keep]
+        print(f"matched against {args.match}: {len(files)} of {before} kept")
+        if not files:
+            print("nothing matched -- are the two corpora named the same way?")
+            return 1
     if not files:
         print(f"no dataset at {data_dir} -- run collect_pgd.py first")
         return 1
@@ -395,8 +416,33 @@ def main() -> int:
                 mel = mel + args.input_noise * torch.randn_like(mel)
             pred = net.max_delta * torch.tanh(net(mel, hint, spk))
             mse, cos, ratio = masked_stats(pred, targ, mask)
+            loss = mse
+            if args.obj_weight > 0:
+                # MSE against noisy per-utterance targets shrinks predictions
+                # toward their mean: a smaller edit has lower MSE and a WORSE
+                # objective, which is why the magnitude ratio settles near
+                # 0.08 and the fixed-average-edit control beat the trained
+                # network (34.5% against 25%). Adding the real objective makes
+                # that shrinkage cost something. MSE stays for stability --
+                # pure objective training converges lower (0.40 against
+                # 0.465), so this is meant to be a hybrid, not a replacement.
+                k = min(args.obj_clips, mel.shape[0])
+                obj = 0.0
+                for b in range(k):
+                    frames = int(mask[b].sum().item())
+                    if frames < 8:
+                        continue
+                    m1 = (mel[b:b + 1, :, :frames] + pred[b:b + 1, :, :frames])
+                    with diffscore.differentiable():
+                        wav, _ = hift_call(m1)
+                        mar = diffscore.detector_margins(wav.squeeze(0), device,
+                                                         max_windows=2)
+                        obj = obj + diffscore.margin_objective(
+                            mar, cap=args.margin_cap, mode="softmin", k=1.0)
+                if k:
+                    loss = loss - args.obj_weight * (obj / k)
             opt.zero_grad()
-            mse.backward()
+            loss.backward()
             torch.nn.utils.clip_grad_norm_(net.parameters(), 1.0)
             opt.step()
             tot["mse"] += float(mse); tot["cos"] += float(cos); tot["ratio"] += float(ratio)
