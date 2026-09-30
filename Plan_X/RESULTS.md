@@ -1411,6 +1411,62 @@ training, more compute -- was working around a corpus that had been built
 without the constraint the results were graded against. Constrain what you
 imitate, and the budget spends itself on evasion instead.
 
+### 7t. Adding the objective to the distillation loss: a clear failure
+
+7n and 7o diagnosed the training signal. MSE against noisy per-utterance
+targets shrinks predictions toward their mean, a smaller edit scores better on
+MSE and worse on the objective, and the evidence was the magnitude ratio
+settling at 0.08 while a fixed average edit (34.5%) beat the trained network
+(25%). The obvious fix was never tried: add the real margin objective to the
+loss, so shrinkage costs something.
+
+    loss = mse - obj_weight * margin_objective(detectors(hift(mel + pred)))
+
+`distill.py --obj-weight 0.01 --obj-clips 1`, on the quality-constrained
+corpus, against the identical corpus trained with pure MSE.
+
+**It does exactly what it was designed to do, and that turns out to be the
+problem.** The magnitude ratio climbs 0.07 -> 0.46 across training instead of
+collapsing to 0.06, so the shrinkage is genuinely reversed. Single-pass
+validation soft-min reaches 0.516 against 0.484, and best recovery 18.7%
+against 17.9%. Every training-time indicator says it worked.
+
+**On the real metric it is worse on every axis** (all 15 voices, unseen
+sentences, both models from the same corpus at 12 passes):
+
+| | soft-min | d PESQ | similarity | WER | >= 0.5 |
+|---|---|---|---|---|---|
+| unedited | 0.2764 | -- | 0.819 | 3.6% | 1/15 |
+| **pure MSE x12** | **0.5881** | **-0.209** | **0.817** | **4.3%** | **11/15** |
+| hybrid loss x12 | 0.4126 | **-2.147** | 0.756 | 8.4% | 6/15 |
+
+Paired: soft-min -0.176 (t = -6.29), PESQ **-1.94 (t = -26.26)**, similarity
+-0.060 (t = -8.60), WER +4.2 points (t = 2.97). All at p < 0.005.
+
+**Why, and it is the same lesson for the third time.** The objective was added
+as a PRICE -- a weighted term in a sum -- and 7q already established that a
+price gets outbid: "a weighted penalty is always outbid by the objective given
+enough steps". Here the roles are swapped, with MSE as the price and the
+objective as the reward, and the outcome is identical. The magnitude did not
+converge; it climbed all the way to 0.46, and a per-pass edit that large
+compounds over 12 passes into -2.1 PESQ.
+
+The warning was visible during training and misread. At epoch 120 the ratio
+was 0.34 and still rising; it levelled around 0.31-0.35 for forty epochs,
+which looked like convergence, and then resumed climbing to 0.46. Training
+indicators alone could not distinguish "shrinkage corrected" from "price being
+outbid" -- only the end-to-end evaluation separated them.
+
+**What would be worth trying instead**, if this is picked up again: make the
+objective term a constraint rather than a price, the same way 7q fixed the
+perceptual penalty. Hold |delta| or the perceptual cost at a hinge and let the
+objective push only up to that line. Nothing in this section argues the
+diagnosis in 7n was wrong -- the shrinkage is real and the term does reverse
+it. It argues that reversing it without a bound is worse than living with it.
+
+**The recommended configuration is unchanged by this**: the
+quality-constrained corpus, pure MSE, 12 passes (7s).
+
 ### Honest limits
 
 Current as of 7r. Earlier revisions of this list were scoped to section 7c and
