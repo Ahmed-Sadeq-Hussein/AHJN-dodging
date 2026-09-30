@@ -27,6 +27,7 @@ Regenerate the collection with `python collect_graphs.py`.
 | [`16_margin_per_voice.png`](16_margin_per_voice.png) | Per voice at both operating points: 14 of 15 clear soft-min 0.5 when quality is not constrained | 7n |
 | [`17_frontier.png`](17_frontier.png) | Every method on one axis: soft-min bought per unit of audio damage | 7q |
 | [`18_longform.png`](18_longform.png) | Long audio attacked against the whole-file score: the failure at length was the objective, not the audio | 7r |
+| [`19_qc_frontier.png`](19_qc_frontier.png) | Constraining the teacher moves the evasion/quality frontier; all 15 voices on one basis | 7s, 7t |
 
 ## From individual runs
 

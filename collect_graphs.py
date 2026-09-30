@@ -61,6 +61,8 @@ CAPTIONS = {
                     "audio damage", "7q"),
     "18_longform": ("Long audio attacked against the whole-file score: the "
                     "failure at length was the objective, not the audio", "7r"),
+    "19_qc_frontier": ("Constraining the teacher moves the evasion/quality "
+                       "frontier; all 15 voices on one basis", "7s, 7t"),
 }
 
 
