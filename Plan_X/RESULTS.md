@@ -1312,6 +1312,87 @@ attackable and that a distillation corpus could be built there; they do not
 show a network doing it in a forward pass. No long-form targets have been
 collected, and the learned operator's long-form result in 7e still stands.
 
+### 7s. Constraining the TEACHER moves the frontier
+
+Every section from 7m to 7r ended the same way: more evasion was available,
+and it cost more audio quality than the -0.30 PESQ budget allowed. The
+frontier had not moved since 7q. This is the section where it moves, and the
+change is one line of the pipeline nobody had touched.
+
+**The teacher was never quality-constrained.** PGD maximises evasion and
+nothing else. Targets were filtered AFTERWARDS for similarity and WER -- but
+never for audio quality, and 7j had already measured what the teacher's own
+solutions cost: **-0.64 PESQ**, itself outside the budget its students are
+held to. So the corpus taught the student to make expensive edits, and no
+filter in the pipeline was looking for that.
+
+`collect_pgd.py --penalty mrstft+mask` puts the perceptual cost inside the PGD
+loop as a hinge (7q's lesson: a price gets outbid, a constraint does not).
+180 targets, 15 voices x 12 sentences.
+
+**At the teacher level the constraint is nearly free** (`compare_corpora.py`,
+paired on all 180 shared pairs):
+
+| | unconstrained | constrained | difference | t |
+|---|---|---|---|---|
+| soft-min reached | 0.995 | 0.969 | -0.026 | -4.54 |
+| \|delta\| | 0.196 | **0.108** | **-45%** | -75.63 |
+| similarity cost | +0.0396 | **-0.0054** | -0.045 | -11.95 |
+| WER cost | +0.23 pp | -0.36 pp | -0.60 | -1.55 |
+| soft-min per unit of edit | 3.85 | **6.72** | +75% | |
+
+2.6% less evasion for an edit less than half the size, and a similarity cost
+that turns into a similarity gain. The effect was stable as the sample grew
+(-0.047 / -0.053 / -0.034 / -0.026 at n = 10 / 45 / 95 / 180), unlike the
+three prosody effects that halved each time n doubled.
+
+**It also produces a corpus that survives filtering.** On the same 180 pairs,
+same thresholds: 169/180 kept against **134/180** for the unconstrained
+teacher, and 1 target dropped for similarity damage against **29**.
+
+**The student inherits the cheapness, not the evasion** (`eval_all15.py`, all
+15 voices x 4 unseen sentences, both students trained on the same 180 pairs):
+
+| | soft-min | d PESQ | similarity | WER | >= 0.5 |
+|---|---|---|---|---|---|
+| unedited | 0.2764 | -- | 0.819 | 3.6% | 1/15 |
+| control, unconstrained | 0.4580 | -0.125 | 0.823 | 3.9% | 6/15 |
+| **quality-constrained** | 0.4049 | **+0.004** | 0.819 | 4.3% | 5/15 |
+
+Paired: soft-min -0.053 (p = 0.002), PESQ **+0.129 (p = 0.0002)**. 71% of the
+control's evasion for a quality cost indistinguishable from zero -- PESQ is
+fractionally ABOVE unedited.
+
+*(An efficiency ratio is not reported for that row. Soft-min gained per PESQ
+point divides by +0.004 there and prints 36.18, which is an artefact of a
+near-zero denominator, not a measurement.)*
+
+**And the unspent budget is what pays.** The pass count has always been the
+evasion-versus-quality dial (7h, 7k, 7n). A student whose every pass is
+perceptually free can afford three times as many:
+
+| | soft-min | d PESQ | similarity | WER | >= 0.5 |
+|---|---|---|---|---|---|
+| unedited | 0.2764 | -- | 0.819 | 3.6% | 1/15 |
+| margin x4 (7n's best in budget) | 0.4540 | -0.172 | 0.821 | 5.3% | 6/15 |
+| **quality-constrained x12** | **0.5881** | -0.209 | 0.817 | **4.3%** | **11/15** |
+
+**+0.134 soft-min, t = 7.24, p < 1e-4**, at a PESQ cost statistically
+indistinguishable from the old best (p = 0.31) and still inside the budget.
+WER improves. Voices clearing 0.5 go 6 -> 11. Against unedited: +0.312,
+t = 11.28, p = 2e-16.
+
+It beats the other in-budget configuration on BOTH axes at once -- the
+probability model at 10 passes reached 0.489 at -0.28. Efficiency across the
+three: 0.76, 1.03, **1.49**.
+
+**What this says.** The binding constraint was never the student's capacity or
+the amount of data. It was that the targets themselves were too expensive, and
+every downstream fix -- capacity sweeps, conditioning, profile init, direct
+training, more compute -- was working around a corpus that had been built
+without the constraint the results were graded against. Constrain what you
+imitate, and the budget spends itself on evasion instead.
+
 ### Honest limits
 
 Current as of 7r. Earlier revisions of this list were scoped to section 7c and

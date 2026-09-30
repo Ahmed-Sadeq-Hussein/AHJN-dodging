@@ -98,6 +98,25 @@ def main() -> int:
             n_pass = sum(1 for v in bs["per_voice"] if v[arm]["softmin"] >= 0.5)
             claim(f"{lab} voices >= 0.5", 6, n_pass, "7n", 0.5)
 
+    # ---- 7s: the quality-constrained teacher --------------------------------
+    qc = _load("all15_qc_vs_ctl.json")
+    if qc:
+        c = qc["clips"]
+        claim("7s control soft-min", 0.4580, _mean(c, "old", "softmin"), "7s")
+        claim("7s constrained soft-min", 0.4049, _mean(c, "new", "softmin"), "7s")
+        bp = _mean(c, "baseline", "pesq")
+        claim("7s constrained d PESQ", 0.004, _mean(c, "new", "pesq") - bp, "7s")
+        claim("7s control d PESQ", -0.125, _mean(c, "old", "pesq") - bp, "7s")
+
+    q12 = _load("all15_qc12_vs_best.json")
+    if q12:
+        c = q12["clips"]
+        claim("7s qc x12 soft-min", 0.5881, _mean(c, "new", "softmin"), "7s")
+        claim("7s qc x12 d PESQ", -0.209, _mean(c, "new", "pesq")
+              - _mean(c, "baseline", "pesq"), "7s")
+        n_pass = sum(1 for v in q12["per_voice"] if v["new"]["softmin"] >= 0.5)
+        claim("7s qc x12 voices >= 0.5", 11, n_pass, "7s", 0.5)
+
     # ---- section 7r: long form under the global-file objective ---------------
     for name, length, gain, sec in (("longform_attack_medlong.json", "medium", 0.771, "7r"),
                                     ("longform_attack_medlong.json", "long", 0.405, "7r"),
