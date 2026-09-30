@@ -1386,6 +1386,24 @@ It beats the other in-budget configuration on BOTH axes at once -- the
 probability model at 10 passes reached 0.489 at -0.28. Efficiency across the
 three: 0.76, 1.03, **1.49**.
 
+**Where the budget runs out.** Sweeping the pass count on the same model:
+
+| passes | soft-min | d PESQ | efficiency | >= 0.5 | inside budget |
+|---|---|---|---|---|---|
+| **12** | 0.5881 | **-0.209** | **1.49** | 11/15 | **yes** |
+| 16 | 0.6894 | -0.355 | 1.16 | 13/15 | no |
+| 20 | 0.7505 | -0.539 | 0.88 | 14/15 | no |
+
+12 is both the best in-budget point and the peak of efficiency, which falls
+away on either side of it. 16 overshoots the budget slightly for 13 of 15
+voices; 20 reaches 14 of 15 at -0.54, which is the same trade 7n's x14 made
+and the same answer applies -- available, but not inside the brief.
+
+Two voices worth naming. `david` clears 0.5 for the first time in the project
+(0.048 -> 0.506 at x20); it has RawNet2 pinned at 0.00 and every earlier
+configuration either failed on it or made it slightly worse. `tahmkench` goes
+0.083 -> 0.551.
+
 **What this says.** The binding constraint was never the student's capacity or
 the amount of data. It was that the targets themselves were too expensive, and
 every downstream fix -- capacity sweeps, conditioning, profile init, direct
