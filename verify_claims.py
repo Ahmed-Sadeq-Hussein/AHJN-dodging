@@ -117,6 +117,13 @@ def main() -> int:
         n_pass = sum(1 for v in q12["per_voice"] if v["new"]["softmin"] >= 0.5)
         claim("7s qc x12 voices >= 0.5", 11, n_pass, "7s", 0.5)
 
+    # ---- 7s: does more data help? no ---------------------------------------
+    c330 = _load("all15_qc330_vs_qc180.json")
+    if c330:
+        c = c330["clips"]
+        claim("7s 330-target soft-min", 0.5960, _mean(c, "new", "softmin"), "7s")
+        claim("7s 180-target soft-min", 0.5881, _mean(c, "old", "softmin"), "7s")
+
     # ---- 7t: the hybrid loss, a failure ------------------------------------
     hy = _load("all15_qcobj_vs_qc.json")
     if hy:

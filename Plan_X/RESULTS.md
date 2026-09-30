@@ -1404,6 +1404,27 @@ Two voices worth naming. `david` clears 0.5 for the first time in the project
 configuration either failed on it or made it slightly worse. `tahmkench` goes
 0.083 -> 0.551.
 
+**More sentences do not help.** The corpus was extended from 12 to all 22
+sentences per voice -- 180 -> 330 targets, 312 surviving the filter (94.5%,
+holding the constrained teacher's rate at the larger size) -- and retrained
+identically:
+
+| corpus | soft-min | d PESQ | similarity | WER | >= 0.5 |
+|---|---|---|---|---|---|
+| 180 targets x12 | 0.5881 | -0.209 | 0.817 | 4.3% | 11/15 |
+| 330 targets x12 | 0.5960 | -0.179 | 0.814 | 4.8% | 11/15 |
+
+Paired: **+0.008 soft-min, t = 0.79, p = 0.43**. Nothing moves on any axis.
+83% more data buys nothing measurable.
+
+This closes the data lever. 7l named "adding voices to the dataset" as the
+strongest remaining gap, on the strength of 79% recovery on trained voices
+against 45% on held-out ones -- but VOICE_DATA_ROOT holds exactly 15 voices
+and all 15 are already in every corpus, so that lever was never actually
+available. The only axis that could be extended was sentences, and extending
+it to exhaustion does nothing. Whatever limits held-out generalisation here,
+it is not the number of training examples.
+
 **What this says.** The binding constraint was never the student's capacity or
 the amount of data. It was that the targets themselves were too expensive, and
 every downstream fix -- capacity sweeps, conditioning, profile init, direct
