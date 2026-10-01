@@ -134,6 +134,13 @@ def main() -> int:
                     help="how many texts from TRAIN_TEXTS to use (default: all)")
     ap.add_argument("--steps", type=int, default=60)
     ap.add_argument("--max-delta", type=float, default=0.6)
+    ap.add_argument("--warm-start", default=None,
+                    help="distill run whose operator pre-edits the mel before "
+                         "PGD solves (DAgger: collect on the states the "
+                         "operator actually reaches)")
+    ap.add_argument("--warm-ckpt", default="best.pt")
+    ap.add_argument("--warm-iters", default="2,4,8",
+                    help="comma-separated pass counts, cycled across examples")
     ap.add_argument("--penalty", default=None,
                     choices=(None, "mask", "mrstft", "mrstft+mask"),
                     help="constrain the TEACHER perceptually while it solves")
@@ -213,6 +220,27 @@ def main() -> int:
     hift_call = diffscore.hift_forward_fn(cosy.model.hift)
     identity = MelResidualPolicy(max_delta=args.max_delta).to(device)   # zero-init: no-op
 
+    WARM_SCHEDULE = [int(x) for x in str(args.warm_iters).split(",") if x.strip()]
+    warm_net = None
+    if args.warm_start:
+        from eval_final import AmplifiedAdapter
+        from eval_generalization import build_policy
+        ck = RESULTS_ROOT / "rl_runs" / args.warm_start / args.warm_ckpt
+        if not ck.is_file():
+            print(f"no warm-start checkpoint at {ck}")
+            return 1
+        blob = torch.load(ck, map_location="cpu", weights_only=False)
+        net, kind, _ = build_policy(blob, device, None)
+        net.eval()
+        targs = blob.get("args", {})
+        warm_net = AmplifiedAdapter(net, hift_call, device, args.softmin_k,
+                                    args.softmin_weight, scale=1.0, iters=1,
+                                    names=targs.get("detectors"),
+                                    space=targs.get("objective", "prob"),
+                                    cap=targs.get("margin_cap", 4.0))
+        print(f"warm start: {args.warm_start}/{args.warm_ckpt} ({kind}), "
+              f"passes cycled over {WARM_SCHEDULE}")
+
     # Text-major, not voice-major. Voice-major would spend the whole budget on
     # the first few voices if it runs out of time, leaving the rest with zero
     # examples -- fatal for a dataset whose entire purpose is generalisation
@@ -229,7 +257,7 @@ def main() -> int:
 
     for ti, text, vi, voice in order:
             ref, prompt = refs[voice]
-            key = f"{voice}_t{ti:02d}"
+            key = f"{voice}_t{ti:02d}" + (f"_w{args.warm_iters}" if args.warm_start else "")
             path = out_dir / f"{key}.pt"
             if path.is_file():
                 skipped += 1
@@ -259,6 +287,25 @@ def main() -> int:
                 tmp.unlink(missing_ok=True)
                 continue
             mel = rec.mels[0].clone().to(device)
+
+            # DAgger: move the state to where the OPERATOR actually puts it.
+            # Every target so far was solved on an unedited mel, but the
+            # operator is applied 10-12 times at inference, so passes 2
+            # onward run on mels no target ever covered -- textbook covariate
+            # shift. Warm-starting applies the trained student first and lets
+            # PGD solve the correction from there, so the corpus contains the
+            # states the student will really meet.
+            warm_k = 0
+            if warm_net is not None:
+                warm_k = WARM_SCHEDULE[(vi * len(texts) + ti) % len(WARM_SCHEDULE)]
+                if warm_k:
+                    warm_net.iters = warm_k
+                    # NOT under no_grad: mel_gradient_hint runs its own
+                    # backward pass internally, so suppressing autograd here
+                    # makes it fail with "does not require grad". Detach the
+                    # result instead -- PGD below starts from a fresh leaf.
+                    d_warm, _, _ = warm_net.sample(mel, deterministic=True)
+                    mel = (mel + d_warm).detach()
 
             hint = diffscore.mel_gradient_hint(mel, hift_call, device,
                                                k=args.softmin_k,
@@ -338,7 +385,8 @@ def main() -> int:
                         "sim_before": sim0, "sim_after": sim1,
                         "delta_abs": float(delta.abs().mean()),
                         "penalty_kind": args.penalty, "pen_final": pen_final,
-                        "pen_target": args.pen_target,
+                        "pen_target": args.pen_target, "warm_k": warm_k,
+                        "warm_start": args.warm_start,
                         "steps": args.steps, "max_delta": args.max_delta},
                        path)
 
