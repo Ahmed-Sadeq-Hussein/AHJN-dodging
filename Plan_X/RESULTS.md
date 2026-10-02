@@ -1488,6 +1488,80 @@ it. It argues that reversing it without a bound is worse than living with it.
 **The recommended configuration is unchanged by this**: the
 quality-constrained corpus, pure MSE, 12 passes (7s).
 
+### 7u. DAgger: collecting where the operator actually goes
+
+Every target in every corpus up to here was solved on an **unedited** mel.
+The operator is applied 12 times at inference, so passes 2 onward run on mels
+no target ever covered -- textbook covariate shift, and it sits exactly where
+the gains come from, since x12 beats x4 by a wide margin.
+
+`collect_pgd.py --warm-start` applies the trained student first and lets PGD
+solve the correction from there, so the corpus contains the states the
+student will really meet. The pass depth is cycled over {2, 4, 8} across
+examples rather than fixed, so the trajectory is covered rather than one
+point on it. 180 warm-started targets were **aggregated** with the existing
+330 (DAgger aggregates; it does not replace), giving 510, of which 476
+survive filtering.
+
+| | soft-min | d PESQ | similarity | WER | efficiency | >= 0.5 |
+|---|---|---|---|---|---|---|
+| unedited | 0.2764 | -- | 0.819 | 3.6% | -- | 1/15 |
+| qc330 x12 | **0.5960** | -0.179 | 0.814 | 4.8% | 1.79 | **11/15** |
+| DAgger x12 | 0.5292 | **-0.060** | **0.820** | 4.1% | **4.25** | 7/15 |
+
+Paired: soft-min **-0.067 (t = -5.45)**, PESQ **+0.119 (t = 4.23)**,
+similarity **+0.005 (t = 3.18)**. Against unedited, DAgger x12 is +0.253 at
+t = 9.62.
+
+**It did not do what it was meant to do, and did something else instead.** The
+intent was better behaviour on the later passes -- higher soft-min at the same
+pass count. Soft-min went *down*. What improved was cost: at 12 passes the
+edit runs **-0.060 PESQ against -0.179**, roughly a third, with similarity
+rising above the unedited clone. Quality efficiency goes 1.79 -> **4.25**, the
+highest in the project by a factor of two.
+
+The honest reading is that training on already-edited states teaches a
+*gentler* operator rather than a better-aimed one. That makes sense in
+hindsight: a warm-started mel is already most of the way there, so the
+correction PGD solves from it is small, and a corpus of small corrections
+teaches small steps.
+
+**Which leaves the budget unspent**, and the same move as 7s applies -- the
+pass count is the dial, and this operator is cheap enough to turn it much
+further:
+
+| passes | soft-min | d PESQ | similarity | efficiency | >= 0.5 | in budget |
+|---|---|---|---|---|---|---|
+| 12 | 0.5292 | -0.060 | 0.820 | 4.25 | 7/15 | yes |
+| **18** | **0.6271** | **-0.170** | 0.816 | 2.07 | 10/15 | **yes** |
+| 24 | 0.7262 | -0.302 | 0.813 | 1.49 | 13/15 | no, by 0.002 |
+
+**18 passes is the best configuration the project has produced.** Paired
+against the previous best (qc330 at 12 passes) on the same 60 clips:
+
+| | difference | t | p |
+|---|---|---|---|
+| soft-min | **+0.0311** | 2.57 | **0.013** |
+| PESQ | +0.0088 | 0.28 | 0.78 |
+| similarity | +0.0021 | 1.63 | 0.11 |
+| WER | -0.44 pp | -0.68 | 0.50 |
+
+Significantly more evasion at a quality cost that is statistically identical.
+Modest -- +0.031 soft-min -- but real, and free.
+
+**One honest wrinkle.** DAgger x18 has the higher *mean* soft-min yet clears
+0.5 on **10 of 15** voices against qc330's 11. The gain is distributional:
+it lifts voices that were already moving rather than converting a stubborn
+one. If the threshold count is what matters to you rather than the mean, the
+two are a tie and qc330 x12 is the simpler pipeline.
+
+24 passes misses the budget by 0.002 PESQ, which is inside anyone's noise --
+treat it as the boundary rather than as a failure, and note it reaches
+13 of 15 voices.
+
+**So the final recommendation is the DAgger operator at 18 passes**, with
+qc330 at 12 as the simpler alternative that is not meaningfully worse.
+
 ### Honest limits
 
 Current as of 7r. Earlier revisions of this list were scoped to section 7c and

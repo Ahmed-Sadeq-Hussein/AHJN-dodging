@@ -40,6 +40,9 @@ POINTS = [
     ("all15_qc20_vs_qc16.json", "old", "constrained", 16, "qc"),
     ("all15_qc20_vs_qc16.json", "new", "constrained", 20, "qc"),
     ("all15_qcobj_vs_qc.json", "new", "hybrid loss", 12, "bad"),
+    ("all15_dagger_vs_qc330.json", "new", "DAgger", 12, "dagger"),
+    ("all15_dagger24_vs_18.json", "old", "DAgger", 18, "dagger"),
+    ("all15_dagger24_vs_18.json", "new", "DAgger", 24, "dagger"),
 ]
 
 
@@ -73,6 +76,7 @@ def main() -> int:
     fig, ax = plt.subplots(figsize=(11.5, 6.6))
     style = {"old": (C_OLD, "o", "unconstrained teacher (7n)"),
              "qc": (C_QC, "s", "quality-constrained teacher (7s)"),
+             "dagger": ("#b5487a", "D", "DAgger, warm-started targets (7u)"),
              "bad": (C_BAD, "X", "objective added to the loss (7t)")}
 
     for series, (colour, marker, legend) in style.items():

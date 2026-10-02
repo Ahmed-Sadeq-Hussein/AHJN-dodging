@@ -124,6 +124,23 @@ def main() -> int:
         claim("7s 330-target soft-min", 0.5960, _mean(c, "new", "softmin"), "7s")
         claim("7s 180-target soft-min", 0.5881, _mean(c, "old", "softmin"), "7s")
 
+    # ---- 7u: DAgger ---------------------------------------------------------
+    dg = _load("all15_dagger_vs_qc330.json")
+    if dg:
+        c = dg["clips"]
+        bp = _mean(c, "baseline", "pesq")
+        claim("7u DAgger x12 soft-min", 0.5292, _mean(c, "new", "softmin"), "7u")
+        claim("7u DAgger x12 d PESQ", -0.060, _mean(c, "new", "pesq") - bp, "7u")
+    sw = _load("all15_dagger24_vs_18.json")
+    if sw:
+        c = sw["clips"]
+        bp = _mean(c, "baseline", "pesq")
+        claim("7u DAgger x18 soft-min", 0.6271, _mean(c, "old", "softmin"), "7u")
+        claim("7u DAgger x18 d PESQ", -0.170, _mean(c, "old", "pesq") - bp, "7u")
+        claim("7u DAgger x24 soft-min", 0.7262, _mean(c, "new", "softmin"), "7u")
+        n = sum(1 for v in sw["per_voice"] if v["old"]["softmin"] >= 0.5)
+        claim("7u DAgger x18 voices >= 0.5", 10, n, "7u", 0.5)
+
     # ---- 7t: the hybrid loss, a failure ------------------------------------
     hy = _load("all15_qcobj_vs_qc.json")
     if hy:
