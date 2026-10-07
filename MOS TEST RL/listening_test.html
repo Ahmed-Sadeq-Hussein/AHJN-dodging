@@ -1,0 +1,566 @@
+<title>Voice Listening Test</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:ital,wght@0,400;1,400&display=swap">
+<style>
+  :root{
+    --ground:#f4f3f0; --surface:#ffffff; --surface-2:#faf9f7;
+    --ink:#191c22; --ink-2:#5a6070; --ink-3:#878d9c;
+    --line:#e0dcd4; --line-2:#efece6;
+    --grey:#8a8f98; --teal:#2a9d8f; --indigo:#4a5fc1; --amber:#e07a1f;
+    --accent:#4a5fc1; --accent-soft:#eceefb;
+    --good:#2a9d8f; --warn:#e07a1f;
+    --shadow:0 1px 2px rgba(25,28,34,.06), 0 6px 18px rgba(25,28,34,.05);
+    --radius:10px;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --ground:#131519; --surface:#1b1e24; --surface-2:#20242b;
+      --ink:#e8e6e1; --ink-2:#a2a8b5; --ink-3:#767d8c;
+      --line:#2c3038; --line-2:#242830;
+      --accent:#8c9bf0; --accent-soft:#242a44;
+      --grey:#9aa0aa; --teal:#3fb8a8; --indigo:#8c9bf0; --amber:#f0932f;
+      --good:#3fb8a8; --warn:#f0932f;
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.28);
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#131519; --surface:#1b1e24; --surface-2:#20242b;
+    --ink:#e8e6e1; --ink-2:#a2a8b5; --ink-3:#767d8c;
+    --line:#2c3038; --line-2:#242830;
+    --accent:#8c9bf0; --accent-soft:#242a44;
+    --grey:#9aa0aa; --teal:#3fb8a8; --indigo:#8c9bf0; --amber:#f0932f;
+    --good:#3fb8a8; --warn:#f0932f;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.28);
+  }
+  html,body{height:100%}
+  body{
+    background:var(--ground); color:var(--ink);
+    font-family:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+    font-size:15px; line-height:1.5; margin:0;
+  }
+  .wrap{max-width:940px; margin:0 auto; padding-inline:16px; padding-block:0 56px}
+
+  /* ---- header ---- */
+  header.bar{
+    position:sticky; top:env(safe-area-inset-top,0px); z-index:20;
+    background:color-mix(in srgb, var(--ground) 88%, transparent);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line);
+  }
+  .bar-in{max-width:940px; margin:0 auto; padding:12px 16px;
+    display:flex; align-items:center; gap:14px; flex-wrap:wrap}
+  .brand{font-weight:700; letter-spacing:-.02em; font-size:16px; margin-right:auto}
+  .brand span{color:var(--ink-3); font-weight:500}
+  .prog{font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:12px;
+    color:var(--ink-2); font-variant-numeric:tabular-nums; white-space:nowrap}
+  .progbar{height:4px; background:var(--line-2); border-radius:99px; overflow:hidden;
+    width:120px; flex:none}
+  .progbar i{display:block; height:100%; background:var(--accent); width:0; transition:width .25s}
+
+  button{font:inherit; color:inherit; cursor:pointer}
+  .btn{
+    border:1px solid var(--line); background:var(--surface); color:var(--ink);
+    border-radius:8px; padding:7px 12px; font-size:13px; font-weight:500;
+    display:inline-flex; align-items:center; gap:7px; transition:.12s;
+  }
+  .btn:hover{border-color:var(--ink-3)}
+  .btn:focus-visible,[tabindex]:focus-visible,input:focus-visible{
+    outline:2px solid var(--accent); outline-offset:2px}
+  .btn.on{background:var(--accent-soft); border-color:var(--accent); color:var(--accent)}
+  .btn.ghost{background:transparent}
+
+  /* ---- intro ---- */
+  .intro{margin:26px 0 22px}
+  h1{font-size:clamp(25px,4.4vw,34px); line-height:1.15; letter-spacing:-.025em;
+    margin:0 0 10px; text-wrap:balance; font-weight:700}
+  .lede{color:var(--ink-2); max-width:62ch; margin:0}
+  .line{
+    font-family:"IBM Plex Serif",Georgia,serif; font-size:17px; line-height:1.55;
+    background:var(--surface); border:1px solid var(--line);
+    border-left:3px solid var(--accent);
+    border-radius:0 var(--radius) var(--radius) 0;
+    padding:13px 16px; margin:18px 0 0; color:var(--ink);
+  }
+  .line b{display:block; font-family:"IBM Plex Mono",monospace; font-size:10.5px;
+    letter-spacing:.09em; text-transform:uppercase; color:var(--ink-3);
+    font-weight:500; margin-bottom:5px}
+
+  /* ---- station ---- */
+  .station{background:var(--surface); border:1px solid var(--line);
+    border-radius:var(--radius); box-shadow:var(--shadow); margin-top:20px; overflow:hidden}
+  .st-head{display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+    padding:14px 16px; border-bottom:1px solid var(--line-2); background:var(--surface-2)}
+  .voice{font-size:19px; font-weight:600; letter-spacing:-.01em}
+  .vcount{font-family:"IBM Plex Mono",monospace; font-size:11.5px; color:var(--ink-3);
+    font-variant-numeric:tabular-nums}
+  .nav{margin-left:auto; display:flex; gap:7px}
+
+  .refrow{display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+    padding:13px 16px; background:var(--accent-soft);
+    border-bottom:1px solid var(--line-2)}
+  .refrow .tag{font-family:"IBM Plex Mono",monospace; font-size:10.5px;
+    letter-spacing:.08em; text-transform:uppercase; color:var(--accent); font-weight:600}
+  .refrow .what{color:var(--ink-2); font-size:13px}
+
+  .clip{padding:14px 16px; border-bottom:1px solid var(--line-2)}
+  .clip:last-child{border-bottom:0}
+  .clip-top{display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .swatch{width:9px; height:9px; border-radius:2px; flex:none}
+  .armname{font-weight:600; font-size:14px}
+  .armwhat{color:var(--ink-3); font-size:12px}
+  .scores{margin-left:auto; display:flex; gap:12px; flex-wrap:wrap;
+    font-family:"IBM Plex Mono",monospace; font-size:11.5px; color:var(--ink-2);
+    font-variant-numeric:tabular-nums}
+  .scores i{font-style:normal; color:var(--ink-3)}
+
+  .rates{display:flex; gap:22px; flex-wrap:wrap; margin-top:11px}
+  .rgroup{display:flex; align-items:center; gap:9px; flex-wrap:wrap}
+  .rlabel{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.06em;
+    text-transform:uppercase; color:var(--ink-3); font-weight:500; min-width:46px}
+  .scale{display:flex; gap:4px}
+  .dot{width:31px; height:31px; border-radius:7px; border:1px solid var(--line);
+    background:var(--surface-2); color:var(--ink-2); font-size:13px; font-weight:600;
+    font-family:"IBM Plex Mono",monospace; display:grid; place-items:center; transition:.1s}
+  .dot:hover{border-color:var(--ink-3)}
+  .dot.sel{background:var(--accent); border-color:var(--accent); color:#fff}
+  :root[data-theme="dark"] .dot.sel, :root:not([data-theme="light"]) .dot.sel{color:#14161b}
+  @media (prefers-color-scheme:light){:root:not([data-theme="dark"]) .dot.sel{color:#fff}}
+  .hint{font-size:11.5px; color:var(--ink-3); min-width:92px}
+
+  .glitch{flex-basis:100%}
+  .q{font-size:13px; color:var(--ink-2)}
+  .yn{display:flex; gap:4px}
+  .pill{height:31px; min-width:52px; padding:0 12px; border-radius:7px;
+    border:1px solid var(--line); background:var(--surface-2); color:var(--ink-2);
+    font-size:13px; font-weight:600; transition:.1s}
+  .pill:hover{border-color:var(--ink-3)}
+  .pill.yes.sel{background:var(--warn); border-color:var(--warn); color:var(--surface)}
+  .pill.no.sel{background:var(--good); border-color:var(--good); color:var(--surface)}
+
+  .play{width:34px; height:34px; border-radius:50%; border:1px solid var(--line);
+    background:var(--surface); display:grid; place-items:center; flex:none; transition:.12s}
+  .play:hover{border-color:var(--accent); color:var(--accent)}
+  .play.playing{background:var(--accent); border-color:var(--accent); color:#fff}
+  .play svg{width:13px; height:13px; fill:currentColor; display:block}
+
+  /* ---- results ---- */
+  .panel{background:var(--surface); border:1px solid var(--line);
+    border-radius:var(--radius); box-shadow:var(--shadow); margin-top:20px; padding:16px}
+  h2{font-size:17px; font-weight:600; letter-spacing:-.015em; margin:0 0 4px}
+  .sub{color:var(--ink-2); font-size:13px; margin:0 0 14px; max-width:62ch}
+  .tablewrap{overflow-x:auto}
+  table{border-collapse:collapse; width:100%; font-size:13px; min-width:560px}
+  th,td{text-align:right; padding:8px 10px; border-bottom:1px solid var(--line-2);
+    font-variant-numeric:tabular-nums; font-family:"IBM Plex Mono",monospace}
+  th:first-child,td:first-child{text-align:left; font-family:"IBM Plex Sans",sans-serif}
+  th{font-size:10.5px; letter-spacing:.07em; text-transform:uppercase;
+    color:var(--ink-3); font-weight:600; border-bottom:1px solid var(--line)}
+  td.name{font-weight:600; display:flex; align-items:center; gap:8px}
+  .empty{color:var(--ink-3); font-size:13px; padding:10px 0}
+  .foot{margin-top:24px; color:var(--ink-3); font-size:12px; line-height:1.6}
+  .foot code{font-family:"IBM Plex Mono",monospace; font-size:11.5px}
+  .savestate{font-family:"IBM Plex Mono",monospace; font-size:11px; color:var(--ink-3)}
+  @media (max-width:560px){
+    .scores{width:100%; margin-left:0}
+    .rates{gap:12px}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<header class="bar">
+  <div class="bar-in">
+    <div class="brand">Listening Test <span>/ MOS &amp; PMOS</span></div>
+    <div class="progbar"><i id="pfill"></i></div>
+    <div class="prog" id="ptext">0 / 0 rated</div>
+    <button class="btn" id="blind">Blind: on</button>
+    <button class="btn ghost" id="export">Export</button>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="intro">
+    <h1>Rate every voice on how human it sounds &mdash; and how much it still sounds like the character</h1>
+    <p class="lede">Each voice was cloned once, then rendered four times through the mel-edit operators this project produced. <strong>All four share one seed</strong>, so the speech tokens and vocoder noise are identical and the only difference you can hear is the edit itself.</p>
+    <p class="line"><b>The line, spoken by every clip</b><span id="theline"></span></p>
+  </div>
+
+  <div id="station"></div>
+
+  <div class="panel">
+    <h2>Your ratings so far</h2>
+    <p class="sub" id="ressub">Mean opinion scores you have given, against what the detectors and objective metrics say about the same clips.</p>
+    <div class="tablewrap"><table id="restab"></table></div>
+  </div>
+
+  <p class="foot" id="foot"></p>
+</div>
+
+<script>
+const DATA = {"text":"The sky shun bright with a beautifull velvet blue. So long have I waited for such a sight","seed":1234,"note":"Reinforcement-learning arms only. All arms for a voice share one seed, so the mel edit is the only difference between them. 1 = human on every detector; soft-min is the worst of the four.","arms":{"baseline":{"run":null,"checkpoint":null,"what":"unedited CosyVoice2 clone, no policy"},"design_a":{"run":"designA_budget4h","checkpoint":"latest.pt","what":"PPO-Lagrangian; made detection significantly easier (slope -0.000727, t = -7.26)"},"design_b":{"run":"designB_B9h","checkpoint":"latest.pt","what":"SAC with a gradient hint; flat (slope +0.000033, t = +0.46)"}},"clips":[{"voice":"Ego","arm":"reference","file":"MOS TEST RL\\references\\Ego.wav","prompt_text":"You know what I'm craving? A little perspective. That's it. I'd like some fresh well-season perspective.","det":{"AASIST":0.6684329509735107,"AASIST-L":0.6641635298728943,"RawNet2":0.6767709851264954,"RawGAT-ST":0.6643503308296204},"softmin":0.668326204355303,"meandet":0.6684294492006302,"worst":"AASIST-L","pesq":2.765957832336426,"stoi":0.9858525991439819,"si_sdr":16.130054473876953},{"voice":"Ego","arm":"baseline","file":"MOS TEST RL\\baseline\\Ego.wav","det":{"AASIST":0.8882367014884949,"AASIST-L":0.6160464882850647,"RawNet2":0.5185617804527283,"RawGAT-ST":0.5256384015083313},"softmin":0.5795636037322847,"meandet":0.6371208429336548,"worst":"RawNet2","sim":0.8729226110715624,"wer":0.05555555555555555,"wer_sub":1,"wer_del":0,"wer_ins":0,"wer_words":18,"transcript":"the sky shun bright with a beautiful velvet blue. So long have I waited for such a sight?","pesq":4.0863447189331055,"stoi":0.9939875602722168,"si_sdr":27.05689239501953,"mos":4.32237434387207},{"voice":"Ego","arm":"design_a","file":"MOS TEST RL\\design_a\\Ego.wav","det":{"AASIST":0.46127378940582275,"AASIST-L":0.06726779043674469,"RawNet2":0.21494941413402557,"RawGAT-ST":0.4990293085575104},"softmin":0.20018431963781028,"meandet":0.31063007563352585,"worst":"AASIST-L","sim":0.8524783418557538,"wer":0.05555555555555555,"wer_sub":1,"wer_del":0,"wer_ins":0,"wer_words":18,"transcript":"the sky shun bright with a beautiful velvet blue. So long have I waited for such a sight?","pesq":3.676973342895508,"stoi":0.9811223745346069,"si_sdr":27.303083419799805,"mos":4.461111068725586},{"voice":"Ego","arm":"design_b","file":"MOS TEST RL\\design_b\\Ego.wav","det":{"AASIST":0.9671159982681274,"AASIST-L":0.6867212653160095,"RawNet2":0.8825908899307251,"RawGAT-ST":0.5095765590667725},"softmin":0.6482815401904761,"meandet":0.7615011781454086,"worst":"RawGAT-ST","sim":0.8667880470339898,"wer":0.05555555555555555,"wer_sub":1,"wer_del":0,"wer_ins":0,"wer_words":18,"transcript":"the sky shun bright with a beautiful velvet blue. So long have I waited for such a sight?","pesq":4.05767822265625,"stoi":0.994203507900238,"si_sdr":27.60235595703125,"mos":4.334747791290283},{"voice":"Joffrey","arm":"reference","file":"MOS TEST RL\\references\\Joffrey.wav","prompt_text":"You've been holding the council meetings in the Tower of the Hand instead of the small council chamber.","det":{"AASIST":0.08827285468578339,"AASIST-L":0.0024340320378541946,"RawNet2":0.4966425597667694,"RawGAT-ST":0.2141183614730835},"softmin":0.10893047506883595,"meandet":0.20036695199087262,"worst":"AASIST-L","pesq":2.598721981048584,"stoi":0.9880313873291016,"si_sdr":24.106210708618164},{"voice":"Joffrey","arm":"baseline","file":"MOS TEST RL\\baseline\\Joffrey.wav","det":{"AASIST":0.9955368041992188,"AASIST-L":0.9870820045471191,"RawNet2":0.4996195435523987,"RawGAT-ST":0.5007085204124451},"softmin":0.5843712184531059,"meandet":0.7457367181777954,"worst":"RawNet2","sim":0.7919349886160678,"wer":0.1111111111111111,"wer_sub":2,"wer_del":0,"wer_ins":0,"wer_words":18,"transcript":"The sky shone bright with a beautiful velvet blue, so long have I waited for such a sight.","pesq":3.4370274543762207,"stoi":0.9976447224617004,"si_sdr":26.936050415039062,"mos":4.376718044281006},{"voice":"Joffrey","arm":"design_a","file":"MOS TEST RL\\design_a\\Joffrey.wav","det":{"AASIST":0.9298037886619568,"AASIST-L":0.768092155456543,"RawNet2":0.3978026509284973,"RawGAT-ST":0.4627048075199127},"softmin":0.5076722094764363,"meandet":0.6396008506417274,"worst":"RawNet2","sim":0.7915874141966219,"wer":0.1111111111111111,"wer_sub":2,"wer_del":0,"wer_ins":0,"wer_words":18,"transcript":"The sky shone bright with a beautiful velvet blue, so long have I waited for such a sight.","pesq":3.0558340549468994,"stoi":0.9892609119415283,"si_sdr":24.741943359375,"mos":4.4046783447265625},{"voice":"Joffrey","arm":"design_b","file":"MOS TEST RL\\design_b\\Joffrey.wav","det":{"AASIST":0.9968980550765991,"AASIST-L":0.9853860139846802,"RawNet2":0.49981826543807983,"RawGAT-ST":0.500521719455719},"softmin":0.5843733315982197,"meandet":0.7456560134887695,"worst":"RawNet2","sim":0.7875090186506325,"wer":0.1111111111111111,"wer_sub":2,"wer_del":0,"wer_ins":0,"wer_words":18,"transcript":"The sky shone bright with a beautiful velvet blue. So long have I waited for such a sight.","pesq":3.3831980228424072,"stoi":0.9976925849914551,"si_sdr":27.140398025512695,"mos":4.3754682540893555},{"voice":"Silco","arm":"reference","file":"MOS TEST RL\\references\\Silco.wav","prompt_text":"Is there anything so and doing as a daughter, break or forge into something greater? Welcome to my assembly. There's a monster inside all of us. The world's growing smaller every day.","det":{"AASIST":0.005705507937818766,"AASIST-L":0.014676110818982124,"RawNet2":0.24962100386619568,"RawGAT-ST":0.0015107805375009775},"softmin":0.037286594885446195,"meandet":0.06787835079012439,"worst":"RawGAT-ST","pesq":3.816525936126709,"stoi":0.9933886528015137,"si_sdr":26.064565658569336},{"voice":"Silco","arm":"baseline","file":"MOS TEST RL\\baseline\\Silco.wav","det":{"AASIST":0.7064786553382874,"AASIST-L":0.10477688163518906,"RawNet2":0.49946919083595276,"RawGAT-ST":0.4638751149177551},"softmin":0.2653355223163619,"meandet":0.4436499606817961,"worst":"AASIST-L","sim":0.8835309728535947,"wer":0.16666666666666666,"wer_sub":2,"wer_del":0,"wer_ins":1,"wer_words":18,"transcript":"The sky is sun bright with a beautiful velvet blue, so long have I waited for such a sight.","pesq":4.218501091003418,"stoi":0.998458981513977,"si_sdr":28.21799087524414,"mos":4.405177116394043},{"voice":"Silco","arm":"design_a","file":"MOS TEST RL\\design_a\\Silco.wav","det":{"AASIST":0.023509306833148003,"AASIST-L":0.0014453032054007053,"RawNet2":0.4901292622089386,"RawGAT-ST":0.18078653514385223},"softmin":0.08220323795030057,"meandet":0.17396760184783489,"worst":"AASIST-L","sim":0.8753323096548367,"wer":0.16666666666666666,"wer_sub":2,"wer_del":0,"wer_ins":1,"wer_words":18,"transcript":"The sky is sun bright with a beautiful velvet blue, so long have I waited for such a sight.","pesq":3.81320858001709,"stoi":0.9891396164894104,"si_sdr":23.78624725341797,"mos":4.43257474899292},{"voice":"Silco","arm":"design_b","file":"MOS TEST RL\\design_b\\Silco.wav","det":{"AASIST":0.7146357297897339,"AASIST-L":0.03484675660729408,"RawNet2":0.49972519278526306,"RawGAT-ST":0.4754370152950287},"softmin":0.20107840673113825,"meandet":0.43116117361932993,"worst":"AASIST-L","sim":0.8807512931419492,"wer":0.16666666666666666,"wer_sub":2,"wer_del":0,"wer_ins":1,"wer_words":18,"transcript":"The sky is sun bright with a beautiful velvet blue, so long have I waited for such a sight.","pesq":4.247841835021973,"stoi":0.9984048008918762,"si_sdr":26.9609432220459,"mos":4.403237342834473},{"voice":"Tywin","arm":"reference","file":"MOS TEST RL\\references\\Tywin.wav","prompt_text":"The tower of the hound is where I work. The walk from there to here would take time. Time I could otherwise spend.","det":{"AASIST":0.5121750831604004,"AASIST-L":0.9854632616043091,"RawNet2":0.4796704649925232,"RawGAT-ST":0.49251341819763184},"softmin":0.5292243014089697,"meandet":0.6174555569887161,"worst":"RawNet2","pesq":2.663212776184082,"stoi":0.9894965291023254,"si_sdr":23.295766830444336},{"voice":"Tywin","arm":"baseline","file":"MOS TEST RL\\baseline\\Tywin.wav","det":{"AASIST":0.9999902844429016,"AASIST-L":0.9997541904449463,"RawNet2":0.33347809314727783,"RawGAT-ST":0.999903678894043},"softmin":0.5049636475655721,"meandet":0.8332815617322922,"worst":"RawNet2","sim":0.7791717546093615,"wer":0.05555555555555555,"wer_sub":1,"wer_del":0,"wer_ins":0,"wer_words":18,"transcript":"The sky shun bright with a beautiful velvet blue. So long have I waited for such a sight.","pesq":3.5153849124908447,"stoi":0.9972720742225647,"si_sdr":27.489715576171875,"mos":4.3964128494262695},{"voice":"Tywin","arm":"design_a","file":"MOS TEST RL\\design_a\\Tywin.wav","det":{"AASIST":0.998358428478241,"AASIST-L":0.9992639422416687,"RawNet2":0.33248913288116455,"RawGAT-ST":0.9696037173271179},"softmin":0.5038165902709756,"meandet":0.824928805232048,"worst":"RawNet2","sim":0.7846252969339049,"wer":0.05555555555555555,"wer_sub":1,"wer_del":0,"wer_ins":0,"wer_words":18,"transcript":"The sky shun bright with a beautiful velvet blue. So long have I waited for such a sight.","pesq":3.3187625408172607,"stoi":0.9915798902511597,"si_sdr":26.92413330078125,"mos":4.407767295837402},{"voice":"Tywin","arm":"design_b","file":"MOS TEST RL\\design_b\\Tywin.wav","det":{"AASIST":0.999988853931427,"AASIST-L":0.9997323155403137,"RawNet2":0.33360645174980164,"RawGAT-ST":0.9999163746833801},"softmin":0.5050901180921902,"meandet":0.8333109989762306,"worst":"RawNet2","sim":0.779582994657291,"wer":0.05555555555555555,"wer_sub":1,"wer_del":0,"wer_ins":0,"wer_words":18,"transcript":"The sky shun bright with a beautiful velvet blue. So long have I waited for such a sight.","pesq":3.5343477725982666,"stoi":0.9975462555885315,"si_sdr":27.380428314208984,"mos":4.396821022033691},{"voice":"Tywin_2","arm":"reference","file":"MOS TEST RL\\references\\Tywin_2.wav","prompt_text":"When I was handed the king under your father's predecessor, the skulls of all the Targaryen dragons were kept in this room. The skull of the last of them was right here. It was the size of a couple.","det":{"AASIST":0.5905650854110718,"AASIST-L":0.7478495240211487,"RawNet2":0.5641167759895325,"RawGAT-ST":0.3704198896884918},"softmin":0.4987343681510602,"meandet":0.5682378187775612,"worst":"RawGAT-ST","pesq":2.379154920578003,"stoi":0.9691381454467773,"si_sdr":19.209320068359375},{"voice":"Tywin_2","arm":"baseline","file":"MOS TEST RL\\baseline\\Tywin_2.wav","det":{"AASIST":0.9820791482925415,"AASIST-L":0.9832249879837036,"RawNet2":0.004810538608580828,"RawGAT-ST":0.44947153329849243},"softmin":0.17448538512535303,"meandet":0.6048965520458296,"worst":"RawNet2","sim":0.8071688361187089,"wer":0.05555555555555555,"wer_sub":1,"wer_del":0,"wer_ins":0,"wer_words":18,"transcript":"the sky shun bright with a beautiful velvet blue. So long have I waited for such a sight?","pesq":3.3561713695526123,"stoi":0.9950060248374939,"si_sdr":27.609899520874023,"mos":4.440202236175537},{"voice":"Tywin_2","arm":"design_a","file":"MOS TEST RL\\design_a\\Tywin_2.wav","det":{"AASIST":0.9703634977340698,"AASIST-L":0.9974607825279236,"RawNet2":0.0007481696084141731,"RawGAT-ST":0.03843354806303978},"softmin":0.10476394597272597,"meandet":0.5017514994833618,"worst":"RawNet2","sim":0.8070138032523323,"wer":0.05555555555555555,"wer_sub":1,"wer_del":0,"wer_ins":0,"wer_words":18,"transcript":"the sky shun bright with a beautiful velvet blue. So long have I waited for such a sight?","pesq":3.198397159576416,"stoi":0.9801529049873352,"si_sdr":24.29294204711914,"mos":4.446096897125244},{"voice":"Tywin_2","arm":"design_b","file":"MOS TEST RL\\design_b\\Tywin_2.wav","det":{"AASIST":0.9855151176452637,"AASIST-L":0.9974353909492493,"RawNet2":0.0005478867678903043,"RawGAT-ST":0.4367828965187073},"softmin":0.16999103880740835,"meandet":0.6050703229702776,"worst":"RawNet2","sim":0.7992101920048091,"wer":0.05555555555555555,"wer_sub":1,"wer_del":0,"wer_ins":0,"wer_words":18,"transcript":"the sky shun bright with a beautiful velvet blue. So long have I waited for such a sight?","pesq":3.388268232345581,"stoi":0.9924335479736328,"si_sdr":26.78112030029297,"mos":4.436932563781738},{"voice":"ahmed","arm":"reference","file":"MOS TEST RL\\references\\ahmed.wav","prompt_text":"Glue the sheet to the dark blue background.","det":{"AASIST":0.9962360858917236,"AASIST-L":0.9101879596710205,"RawNet2":0.9973715543746948,"RawGAT-ST":0.9964179396629333},"softmin":0.9688440966340292,"meandet":0.9750533849000931,"worst":"AASIST-L","pesq":3.147106885910034,"stoi":0.9966765642166138,"si_sdr":25.1053466796875},{"voice":"ahmed","arm":"baseline","file":"MOS TEST RL\\baseline\\ahmed.wav","det":{"AASIST":0.9932353496551514,"AASIST-L":0.8348569869995117,"RawNet2":0.9783004522323608,"RawGAT-ST":0.9992667436599731},"softmin":0.9300699278647844,"meandet":0.9514148831367493,"worst":"AASIST-L","sim":0.7974514370580223,"wer":0.05555555555555555,"wer_sub":1,"wer_del":0,"wer_ins":0,"wer_words":18,"transcript":"The sky shun bright with a beautiful velvet blue. So long have I waited for such a sight.","pesq":3.640186309814453,"stoi":0.9993246793746948,"si_sdr":27.627897262573242,"mos":3.6346335411071777},{"voice":"ahmed","arm":"design_a","file":"MOS TEST RL\\design_a\\ahmed.wav","det":{"AASIST":0.9933310747146606,"AASIST-L":0.8049509525299072,"RawNet2":0.9662548303604126,"RawGAT-ST":0.9982231855392456},"softmin":0.9111923382979517,"meandet":0.9406900107860565,"worst":"AASIST-L","sim":0.789038106387354,"wer":0.05555555555555555,"wer_sub":1,"wer_del":0,"wer_ins":0,"wer_words":18,"transcript":"The sky shun bright with a beautiful velvet blue. So long have I waited for such a sight.","pesq":3.3442580699920654,"stoi":0.9953427314758301,"si_sdr":22.733741760253906,"mos":3.534893035888672},{"voice":"ahmed","arm":"design_b","file":"MOS TEST RL\\design_b\\ahmed.wav","det":{"AASIST":0.9966288805007935,"AASIST-L":0.9060412645339966,"RawNet2":0.9918919205665588,"RawGAT-ST":0.9985839128494263},"softmin":0.9665742862023137,"meandet":0.9732864946126938,"worst":"AASIST-L","sim":0.803770249266951,"wer":0.05555555555555555,"wer_sub":1,"wer_del":0,"wer_ins":0,"wer_words":18,"transcript":"The sky shun bright with a beautiful velvet blue. So long have I waited for such a sight.","pesq":3.5888500213623047,"stoi":0.9989151954650879,"si_sdr":26.414470672607422,"mos":3.669243335723877},{"voice":"david","arm":"reference","file":"MOS TEST RL\\references\\david.wav","prompt_text":"um. the short stories actually contain. ehm. I think perhapsly more humour than the big long stories. Where she really involved in the plot, but all the humour is of eccentricity. my humour for","det":{"AASIST":0.7411739826202393,"AASIST-L":0.6944713592529297,"RawNet2":0.0009084197226911783,"RawGAT-ST":0.022039085626602173},"softmin":0.09722652946942767,"meandet":0.3646482118056156,"worst":"RawNet2","pesq":3.7975480556488037,"stoi":0.9945068955421448,"si_sdr":26.609020233154297},{"voice":"david","arm":"baseline","file":"MOS TEST RL\\baseline\\david.wav","det":{"AASIST":0.6783252954483032,"AASIST-L":0.7652039527893066,"RawNet2":1.425134269084083e-05,"RawGAT-ST":0.0011572163784876466},"softmin":0.08681452273175547,"meandet":0.3611751789896971,"worst":"RawNet2","sim":0.8466588599466853,"wer":0.05555555555555555,"wer_sub":1,"wer_del":0,"wer_ins":0,"wer_words":18,"transcript":"the sky, shun bright with a beautiful velvet blue. So long have I waited for such a sight.","pesq":4.222282409667969,"stoi":0.9987107515335083,"si_sdr":28.990123748779297,"mos":4.396111965179443},{"voice":"david","arm":"design_a","file":"MOS TEST RL\\design_a\\david.wav","det":{"AASIST":0.27933648228645325,"AASIST-L":0.05370818078517914,"RawNet2":1.0703353837016039e-05,"RawGAT-ST":0.00046497798757627606},"softmin":0.046657113495255614,"meandet":0.08338008610326142,"worst":"RawNet2","sim":0.8699695647376917,"wer":0.05555555555555555,"wer_sub":1,"wer_del":0,"wer_ins":0,"wer_words":18,"transcript":"the sky, shun bright with a beautiful velvet blue. So long have I waited for such a sight.","pesq":3.883774995803833,"stoi":0.9968994855880737,"si_sdr":26.392276763916016,"mos":4.425946235656738},{"voice":"david","arm":"design_b","file":"MOS TEST RL\\design_b\\david.wav","det":{"AASIST":0.7815498113632202,"AASIST-L":0.36501479148864746,"RawNet2":1.8570979591459036e-05,"RawGAT-ST":0.0020812053699046373},"softmin":0.0842175412871529,"meandet":0.28716609480034094,"worst":"RawNet2","sim":0.8536524424134466,"wer":0.05555555555555555,"wer_sub":1,"wer_del":0,"wer_ins":0,"wer_words":18,"transcript":"the sky shun bright with a beautiful velvet blue. So long have I waited for such a sight.","pesq":4.214653968811035,"stoi":0.9987959861755371,"si_sdr":28.560632705688477,"mos":4.375458240509033},{"voice":"evelynn","arm":"reference","file":"MOS TEST RL\\references\\evelynn.wav","prompt_text":"That skin looks good on you, but it wouldn't look better on my bedroom floor. I feel their looks like hot breath. They feel my claws like hot knives.","det":{"AASIST":0.013200070708990097,"AASIST-L":0.01634368859231472,"RawNet2":0.33329543471336365,"RawGAT-ST":0.0017182674491778016},"softmin":0.04311650485092702,"meandet":0.09113936536596157,"worst":"RawGAT-ST","pesq":2.737854242324829,"stoi":0.9857292175292969,"si_sdr":16.20719337463379},{"voice":"evelynn","arm":"baseline","file":"MOS TEST RL\\baseline\\evelynn.wav","det":{"AASIST":0.8864855170249939,"AASIST-L":0.436939001083374,"RawNet2":0.3342759907245636,"RawGAT-ST":0.3326736390590668},"softmin":0.3947978758849017,"meandet":0.4975935369729996,"worst":"RawGAT-ST","sim":0.7899462185455033,"wer":0.05555555555555555,"wer_sub":1,"wer_del":0,"wer_ins":0,"wer_words":18,"transcript":"The sky shun bright with a beautiful velvet blue. So long have I waited for such a sight.","pesq":3.6931865215301514,"stoi":0.9972612857818604,"si_sdr":23.783809661865234,"mos":4.3548126220703125},{"voice":"evelynn","arm":"design_a","file":"MOS TEST RL\\design_a\\evelynn.wav","det":{"AASIST":0.43544885516166687,"AASIST-L":0.09313749521970749,"RawNet2":0.36418938636779785,"RawGAT-ST":0.3176826238632202},"softmin":0.2293817225604604,"meandet":0.3026145901530981,"worst":"AASIST-L","sim":0.7709451501431526,"wer":0.05555555555555555,"wer_sub":1,"wer_del":0,"wer_ins":0,"wer_words":18,"transcript":"The sky shun bright with a beautiful velvet blue. So long have I waited for such a sight.","pesq":3.382760763168335,"stoi":0.9913548827171326,"si_sdr":17.058990478515625,"mos":4.940342426300049},{"voice":"evelynn","arm":"design_b","file":"MOS TEST RL\\design_b\\evelynn.wav","det":{"AASIST":0.8476073741912842,"AASIST-L":0.4691387712955475,"RawNet2":0.3346520662307739,"RawGAT-ST":0.33011436462402344},"softmin":0.39879342001520823,"meandet":0.49537814408540726,"worst":"RawGAT-ST","sim":0.7960373973181829,"wer":0.05555555555555555,"wer_sub":1,"wer_del":0,"wer_ins":0,"wer_words":18,"transcript":"The sky shun bright with a beautiful velvet blue. So long have I waited for such a sight.","pesq":3.825188398361206,"stoi":0.9980820417404175,"si_sdr":26.222497940063477,"mos":4.464181423187256},{"voice":"jhin","arm":"reference","file":"MOS TEST RL\\references\\jhin.wav","prompt_text":"Everyone wears a mask, I just chose to make my own. I get nervous before every performance, but I need that feeling.","det":{"AASIST":0.0013847275404259562,"AASIST-L":0.009609953500330448,"RawNet2":0.0003982835914939642,"RawGAT-ST":0.004449531435966492},"softmin":0.003909463514601669,"meandet":0.003960624017054215,"worst":"RawNet2","pesq":1.768203854560852,"stoi":0.9077863097190857,"si_sdr":7.133696556091309},{"voice":"jhin","arm":"baseline","file":"MOS TEST RL\\baseline\\jhin.wav","det":{"AASIST":0.29853901267051697,"AASIST-L":0.00040518728201277554,"RawNet2":0.36359965801239014,"RawGAT-ST":0.5078192949295044},"softmin":0.15470256036373473,"meandet":0.29259078822360607,"worst":"AASIST-L","sim":0.8319651198367478,"wer":0.1111111111111111,"wer_sub":2,"wer_del":0,"wer_ins":0,"wer_words":18,"transcript":"The sky shunned bright with a beautiful velvet blue. So long have I waited for such a sight.","pesq":3.546182155609131,"stoi":0.9900381565093994,"si_sdr":15.35558795928955,"mos":1.4799392223358154},{"voice":"jhin","arm":"design_a","file":"MOS TEST RL\\design_a\\jhin.wav","det":{"AASIST":0.006354643031954765,"AASIST-L":0.00012942396278958768,"RawNet2":0.0026193815283477306,"RawGAT-ST":0.08297751098871231},"softmin":0.018724212025547637,"meandet":0.0230202398779511,"worst":"AASIST-L","sim":0.8238285857918195,"wer":0.1111111111111111,"wer_sub":2,"wer_del":0,"wer_ins":0,"wer_words":18,"transcript":"The sky shunned bright with a beautiful velvet blue. So long have I waited for such a sight.","pesq":2.5077152252197266,"stoi":0.9648510217666626,"si_sdr":13.676922798156738,"mos":1.4807813167572021},{"voice":"jhin","arm":"design_b","file":"MOS TEST RL\\design_b\\jhin.wav","det":{"AASIST":0.49714189767837524,"AASIST-L":0.0012885149335488677,"RawNet2":0.013479867950081825,"RawGAT-ST":0.5548117160797119},"softmin":0.09187186303110442,"meandet":0.26668049916042946,"worst":"AASIST-L","sim":0.825537159218591,"wer":0.1111111111111111,"wer_sub":2,"wer_del":0,"wer_ins":0,"wer_words":18,"transcript":"The sky shunned bright with a beautiful velvet blue. So long have I waited for such a sight.","pesq":3.526331663131714,"stoi":0.9965769648551941,"si_sdr":21.962322235107422,"mos":1.480062484741211},{"voice":"mordekaiser","arm":"reference","file":"MOS TEST RL\\references\\mordekaiser.wav","prompt_text":"I carved my kingdom beyond from the ashes of nothing. No mortals, not even gods will see.","det":{"AASIST":0.0026525231078267097,"AASIST-L":0.2933126986026764,"RawNet2":0.9584229588508606,"RawGAT-ST":0.05741876736283302},"softmin":0.1064542348399179,"meandet":0.3279517369810492,"worst":"AASIST","pesq":1.1650547981262207,"stoi":0.3782743811607361,"si_sdr":-13.388238906860352},{"voice":"mordekaiser","arm":"baseline","file":"MOS TEST RL\\baseline\\mordekaiser.wav","det":{"AASIST":0.015592508018016815,"AASIST-L":0.8056197762489319,"RawNet2":0.4396885335445404,"RawGAT-ST":0.0001198392637888901},"softmin":0.09220075757833313,"meandet":0.3152551642688195,"worst":"RawGAT-ST","sim":0.836666192217034,"wer":0.16666666666666666,"wer_sub":2,"wer_del":0,"wer_ins":1,"wer_words":18,"transcript":"See, the sky shunned bright with a beautiful velvet blue. So long have I waited for such a sight.","pesq":1.687021017074585,"stoi":0.9391002655029297,"si_sdr":10.3851900100708,"mos":3.5784683227539062},{"voice":"mordekaiser","arm":"design_a","file":"MOS TEST RL\\design_a\\mordekaiser.wav","det":{"AASIST":0.009825395420193672,"AASIST-L":0.5815319418907166,"RawNet2":0.6585772037506104,"RawGAT-ST":3.5321270843269303e-05},"softmin":0.09052717844522183,"meandet":0.31249246558309096,"worst":"RawGAT-ST","sim":0.8419869213942025,"wer":0.1111111111111111,"wer_sub":2,"wer_del":0,"wer_ins":0,"wer_words":18,"transcript":"The sky shunned bright with a beautiful velvet blue. So long have I waited for such a sight.","pesq":1.3690125942230225,"stoi":0.8862823843955994,"si_sdr":5.27629280090332,"mos":3.3685364723205566},{"voice":"mordekaiser","arm":"design_b","file":"MOS TEST RL\\design_b\\mordekaiser.wav","det":{"AASIST":0.004901700187474489,"AASIST-L":0.8146153092384338,"RawNet2":0.43255099654197693,"RawGAT-ST":0.000650910718832165},"softmin":0.08731729197882067,"meandet":0.31317972917167936,"worst":"RawGAT-ST","sim":0.8341560838893619,"wer":0.16666666666666666,"wer_sub":2,"wer_del":0,"wer_ins":1,"wer_words":18,"transcript":"See, the sky shunned bright with a beautiful velvet blue. So long, have I waited for such a sight?","pesq":1.672492265701294,"stoi":0.9378126859664917,"si_sdr":9.320777893066406,"mos":3.5078530311584473},{"voice":"riven","arm":"reference","file":"MOS TEST RL\\references\\riven.wav","prompt_text":"Learn from your mistakes. A sword mirrors its owner. What is broken can be reforged.","det":{"AASIST":0.9632377624511719,"AASIST-L":0.6867767572402954,"RawNet2":8.882836846169084e-05,"RawGAT-ST":2.419530756014865e-05},"softmin":0.0864150606241574,"meandet":0.4125318858418723,"worst":"RawGAT-ST","pesq":3.2361223697662354,"stoi":0.946290910243988,"si_sdr":24.325767517089844},{"voice":"riven","arm":"baseline","file":"MOS TEST RL\\baseline\\riven.wav","det":{"AASIST":0.7958216667175293,"AASIST-L":0.620975911617279,"RawNet2":4.9246922571910545e-05,"RawGAT-ST":0.00021598601597361267},"softmin":0.08623430950401649,"meandet":0.35426570281833847,"worst":"RawNet2","sim":0.8645008203027906,"wer":0.05555555555555555,"wer_sub":1,"wer_del":0,"wer_ins":0,"wer_words":18,"transcript":"The sky shun bright with a beautiful velvet blue, so long have I waited for such a sight.","pesq":4.1032795906066895,"stoi":0.9981268048286438,"si_sdr":28.890621185302734,"mos":4.99456262588501},{"voice":"riven","arm":"design_a","file":"MOS TEST RL\\design_a\\riven.wav","det":{"AASIST":0.18877485394477844,"AASIST-L":0.06890404969453812,"RawNet2":9.41761682042852e-05,"RawGAT-ST":0.0013170858146622777},"softmin":0.04521673361330761,"meandet":0.06477254140554578,"worst":"RawNet2","sim":0.8487368598680058,"wer":0.05555555555555555,"wer_sub":1,"wer_del":0,"wer_ins":0,"wer_words":18,"transcript":"The sky shun bright with a beautiful velvet blue, so long have I waited for such a sight.","pesq":3.8504536151885986,"stoi":0.9946790933609009,"si_sdr":21.270952224731445,"mos":4.994580268859863},{"voice":"riven","arm":"design_b","file":"MOS TEST RL\\design_b\\riven.wav","det":{"AASIST":0.9867759943008423,"AASIST-L":0.9776750206947327,"RawNet2":4.785466808243655e-05,"RawGAT-ST":0.0003954250132665038},"softmin":0.08681646789215389,"meandet":0.491223573669231,"worst":"RawNet2","sim":0.8637635156658565,"wer":0.05555555555555555,"wer_sub":1,"wer_del":0,"wer_ins":0,"wer_words":18,"transcript":"The sky shun bright with a beautiful velvet blue, so long have I waited for such a sight.","pesq":4.056048393249512,"stoi":0.9979897737503052,"si_sdr":28.866077423095703,"mos":4.99456262588501},{"voice":"samira","arm":"reference","file":"MOS TEST RL\\references\\samira.wav","prompt_text":"Listen up you sorry lot. Only one rule for this mission. Take no prisoners.","det":{"AASIST":0.0506448931992054,"AASIST-L":0.0029399110935628414,"RawNet2":0.001027886988595128,"RawGAT-ST":0.0001609466999070719},"softmin":0.01198990029205843,"meandet":0.01369340949531761,"worst":"RawGAT-ST","pesq":2.4267489910125732,"stoi":0.9638136625289917,"si_sdr":19.175966262817383},{"voice":"samira","arm":"baseline","file":"MOS TEST RL\\baseline\\samira.wav","det":{"AASIST":0.7781896591186523,"AASIST-L":0.586643397808075,"RawNet2":0.6665842533111572,"RawGAT-ST":0.1778308004140854},"softmin":0.3431010523348281,"meandet":0.5523120276629925,"worst":"RawGAT-ST","sim":0.8101274751658866,"wer":0.05555555555555555,"wer_sub":1,"wer_del":0,"wer_ins":0,"wer_words":18,"transcript":"The sky shun bright with a beautiful velvet blue. So long have I waited for such a sight.","pesq":3.4406588077545166,"stoi":0.9953866600990295,"si_sdr":19.869613647460938,"mos":3.911466121673584},{"voice":"samira","arm":"design_a","file":"MOS TEST RL\\design_a\\samira.wav","det":{"AASIST":0.705639123916626,"AASIST-L":0.49876081943511963,"RawNet2":0.6662431359291077,"RawGAT-ST":0.0968029722571373},"softmin":0.26300609820374893,"meandet":0.49186151288449764,"worst":"RawGAT-ST","sim":0.8225345270604084,"wer":0.05555555555555555,"wer_sub":1,"wer_del":0,"wer_ins":0,"wer_words":18,"transcript":"The sky shun bright with a beautiful velvet blue. So long have I waited for such a sight.","pesq":3.5157458782196045,"stoi":0.9867345094680786,"si_sdr":19.631649017333984,"mos":3.516662120819092},{"voice":"samira","arm":"design_b","file":"MOS TEST RL\\design_b\\samira.wav","det":{"AASIST":0.8038883209228516,"AASIST-L":0.662364661693573,"RawNet2":0.6666291356086731,"RawGAT-ST":0.2091612070798874},"softmin":0.37505172466332803,"meandet":0.5855108313262463,"worst":"RawGAT-ST","sim":0.8064893777756443,"wer":0.05555555555555555,"wer_sub":1,"wer_del":0,"wer_ins":0,"wer_words":18,"transcript":"The sky shun bright with a beautiful velvet blue. So long have I waited for such a sight.","pesq":3.7389793395996094,"stoi":0.9961472749710083,"si_sdr":22.08782386779785,"mos":3.844592809677124},{"voice":"swain","arm":"reference","file":"MOS TEST RL\\references\\swain.wav","prompt_text":"You can sit on a throne. That doesn't make you a ruler. It only means you have an ask. If they already call me a villain, what would they call me when I succeed?","det":{"AASIST":0.0008445456624031067,"AASIST-L":0.0001251852954737842,"RawNet2":0.00022020208416506648,"RawGAT-ST":0.059483062475919724},"softmin":0.012759176973403896,"meandet":0.01516824887949042,"worst":"AASIST-L","pesq":2.2027368545532227,"stoi":0.9585412740707397,"si_sdr":9.892187118530273},{"voice":"swain","arm":"baseline","file":"MOS TEST RL\\baseline\\swain.wav","det":{"AASIST":0.8769168853759766,"AASIST-L":0.33511418104171753,"RawNet2":0.5015717148780823,"RawGAT-ST":0.08617875725030899},"softmin":0.23937923487698076,"meandet":0.44994538463652134,"worst":"RawGAT-ST","sim":0.8671565568240405,"wer":0.05555555555555555,"wer_sub":1,"wer_del":0,"wer_ins":0,"wer_words":18,"transcript":"The sky shun bright with a beautiful velvet blue, so long have I waited for such a sight.","pesq":2.748030662536621,"stoi":0.9845236539840698,"si_sdr":16.70988655090332,"mos":4.947454929351807},{"voice":"swain","arm":"design_a","file":"MOS TEST RL\\design_a\\swain.wav","det":{"AASIST":0.06623534858226776,"AASIST-L":0.0017370246350765228,"RawNet2":0.49874743819236755,"RawGAT-ST":0.004272812977433205},"softmin":0.05579716346955345,"meandet":0.14274815609678626,"worst":"AASIST-L","sim":0.8708250612329955,"wer":0.05555555555555555,"wer_sub":1,"wer_del":0,"wer_ins":0,"wer_words":18,"transcript":"The sky shun bright with a beautiful velvet blue, so long have I waited for such a sight.","pesq":3.3340749740600586,"stoi":0.9812488555908203,"si_sdr":17.5361328125,"mos":3.8968095779418945},{"voice":"swain","arm":"design_b","file":"MOS TEST RL\\design_b\\swain.wav","det":{"AASIST":0.8564112186431885,"AASIST-L":0.2704407870769501,"RawNet2":0.5003126263618469,"RawGAT-ST":0.27789074182510376},"softmin":0.3503720847174858,"meandet":0.4762638434767723,"worst":"AASIST-L","sim":0.8660807110056941,"wer":0.05555555555555555,"wer_sub":1,"wer_del":0,"wer_ins":0,"wer_words":18,"transcript":"The sky shun bright with a beautiful velvet blue, so long have I waited for such a sight.","pesq":2.9899299144744873,"stoi":0.9791651964187622,"si_sdr":15.788325309753418,"mos":4.9479594230651855},{"voice":"tahmkench","arm":"reference","file":"MOS TEST RL\\references\\tahmkench.wav","prompt_text":"War is a manly appetite and your directness has my admiration. I am enthralled by your class and refinement. I must offer you a token of my admirations.","det":{"AASIST":0.0003965975483879447,"AASIST-L":0.0010153392795473337,"RawNet2":0.009244841523468494,"RawGAT-ST":8.405026164837182e-06},"softmin":0.0026087458798121077,"meandet":0.0026662958443921525,"worst":"RawGAT-ST","pesq":3.026235580444336,"stoi":0.9841877222061157,"si_sdr":13.394978523254395},{"voice":"tahmkench","arm":"baseline","file":"MOS TEST RL\\baseline\\tahmkench.wav","det":{"AASIST":0.45776045322418213,"AASIST-L":0.03387780860066414,"RawNet2":3.5336728615220636e-05,"RawGAT-ST":7.34397690393962e-05},"softmin":0.045147764604257706,"meandet":0.12293675958062522,"worst":"RawNet2","sim":0.8496119628022805,"wer":0.1111111111111111,"wer_sub":2,"wer_del":0,"wer_ins":0,"wer_words":18,"transcript":"The sky shunned bright with a beautiful velvet blue. So long have I waited for such a sight.","pesq":3.510023355484009,"stoi":0.995032787322998,"si_sdr":20.12511444091797,"mos":4.994450569152832},{"voice":"tahmkench","arm":"design_a","file":"MOS TEST RL\\design_a\\tahmkench.wav","det":{"AASIST":0.0028659841045737267,"AASIST-L":0.013995731249451637,"RawNet2":3.4610358852660283e-05,"RawGAT-ST":5.581689038081095e-06},"softmin":0.004094900569765886,"meandet":0.004225476850479026,"worst":"RawGAT-ST","sim":0.8609353039291199,"wer":0.16666666666666666,"wer_sub":3,"wer_del":0,"wer_ins":0,"wer_words":18,"transcript":"The sky shunned Brad with a beautiful velvet blue. So long have I waited for such a sight.","pesq":3.2400295734405518,"stoi":0.9860163331031799,"si_sdr":16.475500106811523,"mos":4.994482517242432},{"voice":"tahmkench","arm":"design_b","file":"MOS TEST RL\\design_b\\tahmkench.wav","det":{"AASIST":0.40528833866119385,"AASIST-L":0.1104336529970169,"RawNet2":3.56046948581934e-05,"RawGAT-ST":0.00013197129010222852},"softmin":0.061220698124654374,"meandet":0.1289723919107928,"worst":"RawNet2","sim":0.8402763531078244,"wer":0.1111111111111111,"wer_sub":2,"wer_del":0,"wer_ins":0,"wer_words":18,"transcript":"The sky shunned bright with a beautiful velvet blue. So long have I waited for such a sight.","pesq":3.6094043254852295,"stoi":0.9935194849967957,"si_sdr":19.77579116821289,"mos":4.994455337524414},{"voice":"thresh","arm":"reference","file":"MOS TEST RL\\references\\thresh.wav","prompt_text":"Screening won't do you any good, but it's music to my ears.","det":{"AASIST":0.005402646493166685,"AASIST-L":0.009577685967087746,"RawNet2":0.9977372884750366,"RawGAT-ST":0.5935119390487671},"softmin":0.09351975698988484,"meandet":0.40155738999601454,"worst":"AASIST","pesq":1.1389057636260986,"stoi":0.7906099557876587,"si_sdr":4.893076419830322},{"voice":"thresh","arm":"baseline","file":"MOS TEST RL\\baseline\\thresh.wav","det":{"AASIST":0.013911969028413296,"AASIST-L":0.2394467145204544,"RawNet2":0.9977251887321472,"RawGAT-ST":0.10828099399805069},"softmin":0.12574278831796132,"meandet":0.3398412165697664,"worst":"AASIST","sim":0.8329550357714643,"wer":0.05555555555555555,"wer_sub":1,"wer_del":0,"wer_ins":0,"wer_words":18,"transcript":"The sky shun bright with a beautiful velvet blue. So long have I waited for such a sight.","pesq":1.8218494653701782,"stoi":0.9416688084602356,"si_sdr":7.744454383850098,"mos":3.4665660858154297},{"voice":"thresh","arm":"design_a","file":"MOS TEST RL\\design_a\\thresh.wav","det":{"AASIST":0.005405706819146872,"AASIST-L":0.18635140359401703,"RawNet2":0.7744962573051453,"RawGAT-ST":0.02711828052997589},"softmin":0.08727769981563352,"meandet":0.24834291206207126,"worst":"AASIST","sim":0.8293137139102889,"wer":0.05555555555555555,"wer_sub":1,"wer_del":0,"wer_ins":0,"wer_words":18,"transcript":"The sky shun bright with a beautiful velvet blue. So long have I waited for such a sight.","pesq":1.9593559503555298,"stoi":0.9443326592445374,"si_sdr":11.861113548278809,"mos":3.452159881591797},{"voice":"thresh","arm":"design_b","file":"MOS TEST RL\\design_b\\thresh.wav","det":{"AASIST":0.01042329054325819,"AASIST-L":0.3011111915111542,"RawNet2":0.9957938194274902,"RawGAT-ST":0.03695753589272499},"softmin":0.10302820966136805,"meandet":0.3360714593436569,"worst":"AASIST","sim":0.8364904983010246,"wer":0.05555555555555555,"wer_sub":1,"wer_del":0,"wer_ins":0,"wer_words":18,"transcript":"The sky shun bright with a beautiful velvet blue. So long have I waited for such a sight.","pesq":1.724762201309204,"stoi":0.9440674781799316,"si_sdr":8.565021514892578,"mos":3.4807000160217285}]};
+
+/* ---------- arm presentation ---------- */
+const ARMS = {
+  baseline:        {label:"Unedited",       color:"var(--grey)",   note:"straight CosyVoice2 clone, no edit"},
+  probability_x10: {label:"Probability x10",color:"var(--teal)",   note:"first working operator, 10 passes"},
+  margin_x4:       {label:"Margin x4",      color:"var(--indigo)", note:"recommended configuration"},
+  margin_x14:      {label:"Margin x14",     color:"var(--amber)",  note:"pushed past the quality budget"},
+};
+const ARM_ORDER = Object.keys(ARMS).filter(a => DATA.arms && DATA.arms[a]);
+const MOS_HINT  = ["","clearly synthetic","noticeably off","acceptable","natural","indistinguishable from a person"];
+const PMOS_HINT = ["","a different person","barely them","somewhat them","clearly them","the same performer"];
+
+const clipsByVoice = {};
+const refByVoice = {};
+for (const c of (DATA.clips || [])) {
+  if (c.arm === "reference") { refByVoice[c.voice] = c; continue; }
+  (clipsByVoice[c.voice] = clipsByVoice[c.voice] || []).push(c);
+}
+const VOICES = Object.keys(clipsByVoice).sort((a,b)=>a.toLowerCase().localeCompare(b.toLowerCase()));
+const TOTAL = VOICES.reduce((n,v)=>n+clipsByVoice[v].length, 0);
+
+/* deterministic per-voice shuffle so blind order is stable across reloads */
+function shuffled(voice, arms){
+  let h = 0; for (const ch of voice) h = (h*31 + ch.charCodeAt(0)) >>> 0;
+  const a = arms.slice();
+  for (let i=a.length-1; i>0; i--){ h = (h*1664525 + 1013904223) >>> 0;
+    const j = h % (i+1); [a[i],a[j]] = [a[j],a[i]]; }
+  return a;
+}
+
+/* ---------- state ---------- */
+const ratings = {};                    // "voice__arm" -> {mos,pmos}
+let vi = 0, blind = true, db = null, downloads = null;
+const key = (v,a) => v + "__" + a;
+
+try { const s = localStorage.getItem("blind"); if (s !== null) blind = s === "1"; } catch {}
+
+/* ---------- audio ---------- */
+let current = null;
+function play(src, btn){
+  if (current && current.btn === btn){ stop(); return; }
+  stop();
+  const el = new Audio(src);
+  current = {el, btn};
+  btn.classList.add("playing");
+  el.addEventListener("ended", stop);
+  el.addEventListener("error", () => { btn.classList.remove("playing"); current = null; });
+  el.play().catch(() => { btn.classList.remove("playing"); current = null; });
+}
+function stop(){
+  if (!current) return;
+  current.el.pause();
+  current.btn.classList.remove("playing");
+  current = null;
+}
+const PLAY_SVG = '<svg viewBox="0 0 12 14" aria-hidden="true"><path d="M1 1l10 6-10 6z"/></svg>';
+const STOP_SVG = '<svg viewBox="0 0 12 14" aria-hidden="true"><rect x="1.5" y="2" width="9" height="10" rx="1"/></svg>';
+
+/* ---------- render ---------- */
+function esc(s){ return String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+function render(){
+  const v = VOICES[vi];
+  const ref = refByVoice[v];
+  const arms = blind ? shuffled(v, ARM_ORDER) : ARM_ORDER;
+  const done = VOICES.reduce((n,vv)=>n + clipsByVoice[vv].filter(c=>ratings[key(vv,c.arm)]).length, 0);
+
+  document.getElementById("ptext").textContent = done + " / " + TOTAL + " rated";
+  document.getElementById("pfill").style.width = (TOTAL ? done/TOTAL*100 : 0) + "%";
+  document.getElementById("blind").textContent = "Blind: " + (blind ? "on" : "off");
+  document.getElementById("blind").classList.toggle("on", blind);
+
+  const el = document.getElementById("station");
+  el.innerHTML = "";
+
+  const st = document.createElement("div");
+  st.className = "station";
+
+  const head = document.createElement("div");
+  head.className = "st-head";
+  head.innerHTML =
+    '<div class="voice">' + esc(v) + '</div>' +
+    '<div class="vcount">voice ' + (vi+1) + ' of ' + VOICES.length + '</div>' +
+    '<div class="nav">' +
+      '<button class="btn" id="prev">&larr; Previous</button>' +
+      '<button class="btn" id="next">Next &rarr;</button>' +
+    '</div>';
+  st.appendChild(head);
+
+  if (ref){
+    const r = document.createElement("div");
+    r.className = "refrow";
+    const b = document.createElement("button");
+    b.className = "play"; b.innerHTML = PLAY_SVG;
+    b.setAttribute("aria-label", "Play the original recording for " + v);
+    b.addEventListener("click", () => play(ref.file, b));
+    r.appendChild(b);
+    const t = document.createElement("div");
+    t.innerHTML = '<div class="tag">Original recording</div>' +
+      '<div class="what">the real clip this voice was cloned from &mdash; your reference for both scores</div>';
+    r.appendChild(t);
+    st.appendChild(r);
+  }
+
+  arms.forEach((arm, idx) => {
+    const c = clipsByVoice[v].find(x => x.arm === arm);
+    if (!c) return;
+    const meta = ARMS[arm] || {label:arm, color:"var(--ink-3)", note:""};
+    const row = document.createElement("div");
+    row.className = "clip";
+
+    const top = document.createElement("div");
+    top.className = "clip-top";
+    const pb = document.createElement("button");
+    pb.className = "play"; pb.innerHTML = PLAY_SVG;
+    pb.setAttribute("aria-label", "Play clip " + (idx+1) + " for " + v);
+    pb.addEventListener("click", () => play(c.file, pb));
+    top.appendChild(pb);
+
+    const name = document.createElement("div");
+    if (blind){
+      name.innerHTML = '<span class="armname">Clip ' + String.fromCharCode(65+idx) + '</span>';
+    } else {
+      name.innerHTML =
+        '<span class="armname"><span class="swatch" style="display:inline-block;background:' +
+        meta.color + '"></span> ' + esc(meta.label) + '</span>' +
+        '<div class="armwhat">' + esc(meta.note) + '</div>';
+    }
+    top.appendChild(name);
+
+    if (!blind){
+      const sc = document.createElement("div");
+      sc.className = "scores";
+      sc.innerHTML =
+        '<span><i>soft-min</i> ' + c.softmin.toFixed(3) + '</span>' +
+        '<span><i>sim</i> ' + (c.sim != null ? c.sim.toFixed(3) : "&mdash;") + '</span>' +
+        '<span><i>WER</i> ' + (c.wer != null ? (c.wer*100).toFixed(0)+"%" : "&mdash;") + '</span>' +
+        '<span><i>PESQ</i> ' + (c.pesq != null ? c.pesq.toFixed(2) : "&mdash;") + '</span>';
+      top.appendChild(sc);
+    }
+    row.appendChild(top);
+
+    const rates = document.createElement("div");
+    rates.className = "rates";
+    const cur = ratings[key(v,arm)] || {};
+    for (const kind of ["mos","pmos"]){
+      const g = document.createElement("div");
+      g.className = "rgroup";
+      const lab = document.createElement("span");
+      lab.className = "rlabel";
+      lab.textContent = kind.toUpperCase();
+      lab.title = kind === "mos" ? "How human does it sound?" : "Does it still sound like the character?";
+      g.appendChild(lab);
+
+      const scale = document.createElement("div");
+      scale.className = "scale";
+      for (let n=1; n<=5; n++){
+        const d = document.createElement("button");
+        d.className = "dot" + (cur[kind] === n ? " sel" : "");
+        d.textContent = n;
+        d.setAttribute("aria-label", kind.toUpperCase() + " " + n + ": " +
+          (kind === "mos" ? MOS_HINT[n] : PMOS_HINT[n]));
+        d.addEventListener("click", () => setRating(v, arm, kind, n));
+        scale.appendChild(d);
+      }
+      g.appendChild(scale);
+
+      const h = document.createElement("span");
+      h.className = "hint";
+      h.textContent = cur[kind] ? (kind === "mos" ? MOS_HINT[cur[kind]] : PMOS_HINT[cur[kind]]) : "";
+      g.appendChild(h);
+
+      if (ref){
+        const rb = document.createElement("button");
+        rb.className = "btn ghost";
+        rb.style.padding = "4px 9px";
+        rb.style.fontSize = "12px";
+        rb.textContent = "original";
+        rb.title = "Play the recording this voice was cloned from";
+        rb.addEventListener("click", () => play(ref.file, rb));
+        g.appendChild(rb);
+      }
+      rates.appendChild(g);
+    }
+
+    const gg = document.createElement("div");
+    gg.className = "rgroup glitch";
+    const gl = document.createElement("span");
+    gl.className = "rlabel";
+    gl.textContent = "Glitch";
+    gg.appendChild(gl);
+    const q = document.createElement("span");
+    q.className = "q";
+    q.textContent = "Is there static or audible glitches in the voice?";
+    gg.appendChild(q);
+    const yn = document.createElement("div");
+    yn.className = "yn";
+    for (const [val, text] of [[true, "Yes"], [false, "No"]]){
+      const b = document.createElement("button");
+      b.className = "pill " + (val ? "yes" : "no") + (cur.glitch === val ? " sel" : "");
+      b.textContent = text;
+      b.setAttribute("aria-pressed", cur.glitch === val ? "true" : "false");
+      b.setAttribute("aria-label", "Static or audible glitches: " + text);
+      b.addEventListener("click", () => setRating(v, arm, "glitch", val));
+      yn.appendChild(b);
+    }
+    gg.appendChild(yn);
+    rates.appendChild(gg);
+
+    row.appendChild(rates);
+    st.appendChild(row);
+  });
+
+  el.appendChild(st);
+  document.getElementById("prev").addEventListener("click", () => { stop(); vi = (vi-1+VOICES.length)%VOICES.length; render(); window.scrollTo({top:0,behavior:"smooth"}); });
+  document.getElementById("next").addEventListener("click", () => { stop(); vi = (vi+1)%VOICES.length; render(); window.scrollTo({top:0,behavior:"smooth"}); });
+  results();
+}
+
+function setRating(v, arm, kind, n){
+  const k = key(v,arm);
+  const r = ratings[k] = Object.assign({}, ratings[k]);
+  r[kind] = r[kind] === n ? null : n;
+  if (r[kind] == null) delete r[kind];
+  // "No glitches" is false, so emptiness is checked with == null, not truthiness
+  if (isEmpty(r)) delete ratings[k]; else ratings[k] = r;
+  save(v, arm, ratings[k] || {});
+  render();
+}
+
+/* ---------- persistence ---------- */
+const isEmpty = r => r.mos == null && r.pmos == null && r.glitch == null;
+const queue = {};
+async function save(v, arm, r){
+  if (!db) { try { localStorage.setItem("ratings", JSON.stringify(ratings)); } catch {} return; }
+  const k = key(v,arm);
+  queue[k] = r;
+  if (queue["_busy_" + k]) return;
+  queue["_busy_" + k] = true;
+  try{
+    while (queue[k]){
+      const body = queue[k]; delete queue[k];
+      const doc = db.doc("ratings/" + k);
+      if (isEmpty(body)) await doc.delete();
+      else await doc.set({voice:v, arm:arm, mos:body.mos ?? null, pmos:body.pmos ?? null,
+                          glitch:body.glitch ?? null, updatedAt:new Date().toISOString()});
+    }
+  } catch(e){
+    setSave("could not save — " + (e && e.code ? e.code : "error"));
+  } finally { delete queue["_busy_" + k]; }
+}
+function setSave(msg){
+  const f = document.getElementById("foot");
+  const s = f.querySelector(".savestate");
+  if (s) s.textContent = msg;
+}
+
+/* ---------- results ---------- */
+function results(){
+  const tab = document.getElementById("restab");
+  const rows = ARM_ORDER.map(arm => {
+    const rs = VOICES.map(v => ratings[key(v,arm)]).filter(Boolean);
+    const mos  = rs.filter(r=>r.mos).map(r=>r.mos);
+    const pmos = rs.filter(r=>r.pmos).map(r=>r.pmos);
+    const cs = VOICES.map(v => clipsByVoice[v].find(c=>c.arm===arm)).filter(Boolean);
+    const avg = a => a.length ? a.reduce((x,y)=>x+y,0)/a.length : null;
+    const m = k => avg(cs.map(c=>c[k]).filter(x=>x!=null));
+    const answered = rs.filter(r => typeof r.glitch === "boolean");
+    const glitch = answered.length
+      ? answered.filter(r => r.glitch).length + " / " + answered.length : null;
+    return {arm, n:rs.length, mos:avg(mos), pmos:avg(pmos), glitch,
+            softmin:m("softmin"), sim:m("sim"), pesq:m("pesq")};
+  });
+  const any = rows.some(r => r.n > 0);
+  const f = n => n == null ? "&mdash;" : n.toFixed(2);
+  tab.innerHTML =
+    "<thead><tr><th>Configuration</th><th>Rated</th><th>MOS</th><th>PMOS</th>" +
+    "<th>Glitchy</th><th>Soft-min</th><th>Similarity</th><th>PESQ</th></tr></thead><tbody>" +
+    rows.map(r => {
+      const meta = ARMS[r.arm] || {label:r.arm, color:"var(--ink-3)"};
+      return "<tr><td class='name'><span class='swatch' style='background:" + meta.color +
+        "'></span>" + esc(blind ? "Configuration " + (ARM_ORDER.indexOf(r.arm)+1) : meta.label) + "</td>" +
+        "<td>" + r.n + "</td><td>" + f(r.mos) + "</td><td>" + f(r.pmos) + "</td>" +
+        "<td>" + (r.glitch ?? "&mdash;") + "</td>" +
+        "<td>" + f(r.softmin) + "</td><td>" + f(r.sim) + "</td><td>" + f(r.pesq) + "</td></tr>";
+    }).join("") + "</tbody>";
+  document.getElementById("ressub").textContent = any
+    ? "Your mean scores next to what the detectors and objective metrics say about the same clips."
+    : "Nothing rated yet. Objective metrics are shown now; your MOS and PMOS averages fill in as you go.";
+}
+
+/* ---------- export ---------- */
+async function exportJSON(){
+  const payload = {
+    exportedAt: new Date().toISOString(),
+    text: DATA.text, seed: DATA.seed, arms: DATA.arms,
+    scales: {mos:"1-5, how human it sounds", pmos:"1-5, how much it still sounds like the character",
+             glitch:"true/false, is there static or audible glitches in the voice (null = unanswered)"},
+    ratings: Object.entries(ratings).map(([k,r]) => {
+      const i = k.lastIndexOf("__");
+      return {voice:k.slice(0,i), arm:k.slice(i+2), mos:r.mos ?? null, pmos:r.pmos ?? null,
+              glitch:r.glitch ?? null};
+    }),
+    clips: DATA.clips,
+  };
+  const text = JSON.stringify(payload, null, 2);
+  if (downloads){
+    try { await downloads.save({filename:"mos_ratings.json", data:text}); return; }
+    catch(e){ /* fall through */ }
+  }
+  try{
+    await navigator.clipboard.writeText(text);
+    setSave("ratings copied to the clipboard as JSON");
+  } catch { setSave("could not export here — ratings are still saved"); }
+}
+
+/* ---------- boot ---------- */
+document.getElementById("theline").textContent = DATA.text || "";
+document.getElementById("foot").innerHTML =
+  "Scales follow ITU-T P.800: 1 bad, 2 poor, 3 fair, 4 good, 5 excellent. " +
+  "<strong>MOS</strong> is naturalness alone &mdash; ignore whether it matches the character. " +
+  "<strong>PMOS</strong> is identity alone &mdash; ignore whether it sounds synthetic. " +
+  "<strong>Glitch</strong> asks only about artefacts &mdash; static, clicks, buzz, dropouts &mdash; " +
+  "and is worth checking against the original, since some recordings carry processing of their own. " +
+  "Blind mode hides which configuration each clip came from and shuffles their order per voice, " +
+  "so nothing primes you; turn it off to see the labels and the objective metrics. " +
+  "<span class='savestate'></span>";
+
+document.getElementById("blind").addEventListener("click", () => {
+  blind = !blind;
+  try { localStorage.setItem("blind", blind ? "1" : "0"); } catch {}
+  render();
+});
+document.getElementById("export").addEventListener("click", exportJSON);
+document.addEventListener("keydown", e => {
+  if (e.target.tagName === "INPUT" || e.metaKey || e.ctrlKey) return;
+  if (e.key === "ArrowRight") document.getElementById("next")?.click();
+  if (e.key === "ArrowLeft")  document.getElementById("prev")?.click();
+  if (e.key === " ") { e.preventDefault(); stop(); }
+});
+
+try{
+  const cached = localStorage.getItem("ratings");
+  if (cached) Object.assign(ratings, JSON.parse(cached));
+} catch {}
+render();
+
+(async () => {
+  db = await window.claude?.use?.("db") ?? null;
+  downloads = await window.claude?.use?.("downloads") ?? null;
+  if (!db){ setSave("saving to this browser only"); return; }
+  try{
+    db.collection("ratings").onSnapshot(snap => {
+      for (const k of Object.keys(ratings)) delete ratings[k];
+      snap.docs.forEach(d => {
+        const b = d.data() || {};
+        const r = {};
+        if (b.mos) r.mos = b.mos;
+        if (b.pmos) r.pmos = b.pmos;
+        if (typeof b.glitch === "boolean") r.glitch = b.glitch;
+        if (!isEmpty(r)) ratings[d.id] = r;
+      });
+      setSave("saved");
+      render();
+    }, err => setSave("not syncing — " + err.code));
+  } catch(e){ setSave("saving to this browser only"); }
+})();
+</script>

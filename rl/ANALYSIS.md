@@ -198,6 +198,32 @@ Two changes would restore RL as the right choice rather than a worse one:
 
 ---
 
+## Replication on an unseen sentence
+
+The corpus built by `python -m rl.mos_corpus` is an independent check: a line
+neither policy was trained on, all 15 voices, three arms from one shared seed.
+
+| arm | soft-min | vs baseline | t | p | voices improved |
+|---|---|---|---|---|---|
+| baseline | 0.307 | -- | -- | -- | -- |
+| **Design A** | 0.210 | **-0.097** | **-3.77** | **0.002** | **0 / 15** |
+| Design B | 0.314 | +0.007 | 0.62 | 0.54 | 9 / 15 |
+
+Both results reproduce. Design A degrades significantly and loses on **every
+single voice**, which is a stronger statement than the training trend made.
+Design B is a coin flip: nine voices up, six down, mean movement well inside
+noise.
+
+Speaker similarity (0.829-0.831) and WER (8.1%) are identical across all three
+arms to the precision reported, which is the shared seed doing its job -- the
+arms differ only by the Mel edit.
+
+Audio quality separates them slightly: PESQ 3.40 baseline, **3.16** for
+Design A, 3.44 for Design B. Design A pays real perceptual cost for a result
+that is worse than doing nothing.
+
+---
+
 ## Reproducing
 
 ```python
