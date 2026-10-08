@@ -514,7 +514,7 @@ function results(){
 async function exportJSON(){
   const payload = {
     exportedAt: new Date().toISOString(),
-    text: DATA.text, seed: DATA.seed, arms: DATA.arms,
+    texts: DATA.texts || [DATA.text], seed: DATA.seed, arms: DATA.arms,
     scales: {mos:"1-5, how human it sounds", pmos:"1-5, how much it still sounds like the character",
              glitch:"true/false, is there static or audible glitches in the voice (null = unanswered)"},
     ratings: Object.entries(ratings).map(([k,r]) => {
