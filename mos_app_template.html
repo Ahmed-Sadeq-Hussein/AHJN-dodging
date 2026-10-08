@@ -525,13 +525,34 @@ async function exportJSON(){
     clips: DATA.clips,
   };
   const text = JSON.stringify(payload, null, 2);
+  const n = payload.ratings.filter(r => r.mos != null || r.pmos != null ||
+                                        r.glitch != null).length;
+  const tail = " (" + n + (n === 1 ? " rating)" : " ratings)");
+
   if (downloads){
-    try { await downloads.save({filename:"mos_ratings.json", data:text}); return; }
+    try { await downloads.save({filename:"mos_ratings.json", data:text});
+          setSave("exported mos_ratings.json" + tail); return; }
     catch(e){ /* fall through */ }
   }
+  // Opened as a local file there is no download capability, and the clipboard
+  // is usually blocked too, so the export went nowhere and said so only in a
+  // line at the foot of the page. A blob download needs neither and works
+  // from file:// as well as from the published page.
+  try{
+    const url = URL.createObjectURL(new Blob([text], {type:"application/json"}));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "mos_ratings.json";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    setSave("exported mos_ratings.json" + tail);
+    return;
+  } catch(e){ /* fall through to the clipboard */ }
   try{
     await navigator.clipboard.writeText(text);
-    setSave("ratings copied to the clipboard as JSON");
+    setSave("ratings copied to the clipboard as JSON" + tail);
   } catch { setSave("could not export here — ratings are still saved"); }
 }
 
