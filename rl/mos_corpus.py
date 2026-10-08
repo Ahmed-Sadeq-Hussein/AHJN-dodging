@@ -113,10 +113,13 @@ def main() -> int:
         shutil.copy2(ref, rp)
         ref_scores = score_clip(rp, device=device, quality=not args.no_quality)
         for ti in range(len(args.texts)):
-            clips.append({"voice": f"{voice} line {ti + 1}", "speaker": voice,
+            # our keys after the splat: score_clip returns a "file" of its own
+            # (an OS path) and it must not win over the page-relative one
+            clips.append({**ref_scores,
+                          "voice": f"{voice} line {ti + 1}", "speaker": voice,
                           "line": ti + 1, "arm": "reference",
                           "file": f"references/{voice}.wav",
-                          "prompt_text": prompt, **ref_scores})
+                          "prompt_text": prompt})
 
         cloners.enroll(ref, "CosyVoice2", prompt_text=prompt, alias=voice,
                        device=device)
@@ -148,8 +151,8 @@ def main() -> int:
                 s = score_clip(pth, reference=ref, text=text, device=device,
                                ref_embedding=ref_emb,
                                quality=not args.no_quality)
-                clips.append({"voice": item, "speaker": voice, "line": ti + 1,
-                              "arm": label, "file": rel, **s})
+                clips.append({**s, "voice": item, "speaker": voice,
+                              "line": ti + 1, "arm": label, "file": rel})
                 line += f" {label.split('_')[-1]} {s.get('softmin', float('nan')):.2f}"
                 if torch.cuda.is_available():
                     torch.cuda.empty_cache()

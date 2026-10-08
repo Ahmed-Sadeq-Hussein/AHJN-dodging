@@ -41,6 +41,38 @@ def main() -> int:
         print("template has no /*__DATA__*/ placeholder")
         return 1
 
+    # Clip paths are what the page feeds to new Audio(), so they have to be
+    # relative to the page with forward slashes. Repair what we can -- older
+    # scores.json files carry OS paths with the corpus directory on the front
+    # -- and refuse to build if anything still does not resolve.
+    missing = []
+    for c in data.get("clips", []):
+        f = str(c.get("file", "")).replace("\\", "/")
+        # the stored path may carry the corpus directory either as it was
+        # spelled on the command line or just by name, so try both
+        for pre in (root.as_posix().rstrip("/") + "/", root.name + "/"):
+            if f.startswith(pre):
+                f = f[len(pre):]
+                break
+        f = f.lstrip("/")
+        c["file"] = f
+        if not f or not (root / f).is_file():
+            missing.append(f"{c.get('arm')} {c.get('voice')}: {c.get('file')!r}")
+    if missing:
+        print(f"{len(missing)} clip(s) do not resolve under {root}:")
+        for m in missing[:10]:
+            print(f"  {m}")
+        return 1
+
+    # Every arm in the corpus has to reach the page; the arm table in the
+    # template is presentation only and must not decide what gets shown.
+    arms = sorted({c["arm"] for c in data.get("clips", [])} - {"reference"})
+    declared = sorted(data.get("arms", {}))
+    if declared and declared != arms:
+        print(f"arms in clips {arms} do not match declared {declared}")
+        return 1
+    print(f"{len(arms)} arms: {', '.join(arms)}")
+
     page = tpl.replace("/*__DATA__*/{}", json.dumps(data, separators=(",", ":")))
     out = root / "listening_test.html"
     out.write_text(page, encoding="utf8")

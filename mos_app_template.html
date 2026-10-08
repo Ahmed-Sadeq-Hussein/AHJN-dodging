@@ -179,8 +179,8 @@
 <div class="wrap">
   <div class="intro">
     <h1>Rate every voice on how human it sounds &mdash; and how much it still sounds like the character</h1>
-    <p class="lede">Each voice was cloned once, then rendered four times through the mel-edit operators this project produced. <strong>All four share one seed</strong>, so the speech tokens and vocoder noise are identical and the only difference you can hear is the edit itself.</p>
-    <p class="line"><b>The line, spoken by every clip</b><span id="theline"></span></p>
+    <p class="lede">Each voice was cloned once, then rendered <span id="nrend">several times</span> through the mel-edit operators this project produced. <strong><span id="nshare">All of them</span> share one seed</strong>, so the speech tokens and vocoder noise are identical and the only difference you can hear is the edit itself.</p>
+    <p class="line"><b>The line, spoken by every clip on this screen</b><span id="theline"></span></p>
   </div>
 
   <div id="station"></div>
@@ -198,13 +198,32 @@
 const DATA = /*__DATA__*/{};
 
 /* ---------- arm presentation ---------- */
-const ARMS = {
+const ARM_STYLE = {
   baseline:        {label:"Unedited",       color:"var(--grey)",   note:"straight CosyVoice2 clone, no edit"},
+  design_a:        {label:"Design A",       color:"var(--indigo)", note:"PPO with Lagrangian constraints"},
+  design_b:        {label:"Design B",       color:"var(--teal)",   note:"SAC with a gradient hint"},
   probability_x10: {label:"Probability x10",color:"var(--teal)",   note:"first working operator, 10 passes"},
   margin_x4:       {label:"Margin x4",      color:"var(--indigo)", note:"recommended configuration"},
   margin_x14:      {label:"Margin x14",     color:"var(--amber)",  note:"pushed past the quality budget"},
 };
-const ARM_ORDER = Object.keys(ARMS).filter(a => DATA.arms && DATA.arms[a]);
+const PALETTE = ["var(--grey)","var(--indigo)","var(--teal)","var(--amber)"];
+
+/* The arms on the page come from the corpus, never from the table above. An
+   earlier build intersected the two, so every arm nobody had written a label
+   for was dropped in silence and a three-arm test rendered as one unedited
+   player per voice. Anything the corpus contains is shown now; an unknown arm
+   gets a generated label and a palette colour. */
+const ARM_ORDER = Object.keys(DATA.arms || {}).length
+  ? Object.keys(DATA.arms)
+  : [...new Set((DATA.clips || []).map(c => c.arm))].filter(a => a !== "reference");
+const ARMS = {};
+ARM_ORDER.forEach((a, i) => {
+  ARMS[a] = ARM_STYLE[a] || {
+    label: a.split("_").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" "),
+    color: PALETTE[i % PALETTE.length],
+    note: (DATA.arms && DATA.arms[a] && DATA.arms[a].what) || "",
+  };
+});
 const MOS_HINT  = ["","clearly synthetic","noticeably off","acceptable","natural","indistinguishable from a person"];
 const PMOS_HINT = ["","a different person","barely them","somewhat them","clearly them","the same performer"];
 
@@ -270,6 +289,10 @@ function render(){
 
   const el = document.getElementById("station");
   el.innerHTML = "";
+
+  const here = (clipsByVoice[v] || [])[0];
+  document.getElementById("theline").textContent =
+    (DATA.texts && here && DATA.texts[here.line - 1]) || DATA.text || "";
 
   const st = document.createElement("div");
   st.className = "station";
@@ -513,7 +536,13 @@ async function exportJSON(){
 }
 
 /* ---------- boot ---------- */
-document.getElementById("theline").textContent = DATA.text || "";
+const NTIMES = ["no times","once","twice","three times","four times",
+                "five times","six times"];
+const NSHARE = ["None","It","Both","All three","All four","All five","All six"];
+document.getElementById("nrend").textContent =
+  NTIMES[ARM_ORDER.length] || (ARM_ORDER.length + " times");
+document.getElementById("nshare").textContent =
+  NSHARE[ARM_ORDER.length] || ("All " + ARM_ORDER.length);
 document.getElementById("foot").innerHTML =
   "Scales follow ITU-T P.800: 1 bad, 2 poor, 3 fair, 4 good, 5 excellent. " +
   "<strong>MOS</strong> is naturalness alone &mdash; ignore whether it matches the character. " +

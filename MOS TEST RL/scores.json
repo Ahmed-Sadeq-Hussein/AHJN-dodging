@@ -29,7 +29,7 @@
       "speaker": "Ego",
       "line": 1,
       "arm": "reference",
-      "file": "MOS TEST RL\\references\\Ego.wav",
+      "file": "references/Ego.wav",
       "prompt_text": "You know what I'm craving? A little perspective. That's it. I'd like some fresh well-season perspective.",
       "det": {
         "AASIST": 0.6684329509735107,
@@ -49,7 +49,7 @@
       "speaker": "Ego",
       "line": 2,
       "arm": "reference",
-      "file": "MOS TEST RL\\references\\Ego.wav",
+      "file": "references/Ego.wav",
       "prompt_text": "You know what I'm craving? A little perspective. That's it. I'd like some fresh well-season perspective.",
       "det": {
         "AASIST": 0.6684329509735107,
@@ -69,7 +69,7 @@
       "speaker": "Ego",
       "line": 1,
       "arm": "baseline",
-      "file": "MOS TEST RL\\baseline\\Ego_L1.wav",
+      "file": "baseline/Ego_L1.wav",
       "det": {
         "AASIST": 0.34912943840026855,
         "AASIST-L": 0.2963797152042389,
@@ -96,7 +96,7 @@
       "speaker": "Ego",
       "line": 1,
       "arm": "design_a",
-      "file": "MOS TEST RL\\design_a\\Ego_L1.wav",
+      "file": "design_a/Ego_L1.wav",
       "det": {
         "AASIST": 0.001455241465009749,
         "AASIST-L": 0.0013376070419326425,
@@ -123,7 +123,7 @@
       "speaker": "Ego",
       "line": 1,
       "arm": "design_b",
-      "file": "MOS TEST RL\\design_b\\Ego_L1.wav",
+      "file": "design_b/Ego_L1.wav",
       "det": {
         "AASIST": 0.11286338418722153,
         "AASIST-L": 0.0623290129005909,
@@ -150,7 +150,7 @@
       "speaker": "Ego",
       "line": 2,
       "arm": "baseline",
-      "file": "MOS TEST RL\\baseline\\Ego_L2.wav",
+      "file": "baseline/Ego_L2.wav",
       "det": {
         "AASIST": 0.10171819478273392,
         "AASIST-L": 0.02295711636543274,
@@ -177,7 +177,7 @@
       "speaker": "Ego",
       "line": 2,
       "arm": "design_a",
-      "file": "MOS TEST RL\\design_a\\Ego_L2.wav",
+      "file": "design_a/Ego_L2.wav",
       "det": {
         "AASIST": 0.0017184731550514698,
         "AASIST-L": 2.9017796805419493e-06,
@@ -204,7 +204,7 @@
       "speaker": "Ego",
       "line": 2,
       "arm": "design_b",
-      "file": "MOS TEST RL\\design_b\\Ego_L2.wav",
+      "file": "design_b/Ego_L2.wav",
       "det": {
         "AASIST": 0.1400999128818512,
         "AASIST-L": 0.022282445803284645,
@@ -231,7 +231,7 @@
       "speaker": "Joffrey",
       "line": 1,
       "arm": "reference",
-      "file": "MOS TEST RL\\references\\Joffrey.wav",
+      "file": "references/Joffrey.wav",
       "prompt_text": "You've been holding the council meetings in the Tower of the Hand instead of the small council chamber.",
       "det": {
         "AASIST": 0.08827285468578339,
@@ -251,7 +251,7 @@
       "speaker": "Joffrey",
       "line": 2,
       "arm": "reference",
-      "file": "MOS TEST RL\\references\\Joffrey.wav",
+      "file": "references/Joffrey.wav",
       "prompt_text": "You've been holding the council meetings in the Tower of the Hand instead of the small council chamber.",
       "det": {
         "AASIST": 0.08827285468578339,
@@ -271,7 +271,7 @@
       "speaker": "Joffrey",
       "line": 1,
       "arm": "baseline",
-      "file": "MOS TEST RL\\baseline\\Joffrey_L1.wav",
+      "file": "baseline/Joffrey_L1.wav",
       "det": {
         "AASIST": 0.925825834274292,
         "AASIST-L": 0.5408756136894226,
@@ -298,7 +298,7 @@
       "speaker": "Joffrey",
       "line": 1,
       "arm": "design_a",
-      "file": "MOS TEST RL\\design_a\\Joffrey_L1.wav",
+      "file": "design_a/Joffrey_L1.wav",
       "det": {
         "AASIST": 0.49937471747398376,
         "AASIST-L": 0.31144261360168457,
@@ -325,7 +325,7 @@
       "speaker": "Joffrey",
       "line": 1,
       "arm": "design_b",
-      "file": "MOS TEST RL\\design_b\\Joffrey_L1.wav",
+      "file": "design_b/Joffrey_L1.wav",
       "det": {
         "AASIST": 0.4535270631313324,
         "AASIST-L": 0.1647116243839264,
@@ -352,7 +352,7 @@
       "speaker": "Joffrey",
       "line": 2,
       "arm": "baseline",
-      "file": "MOS TEST RL\\baseline\\Joffrey_L2.wav",
+      "file": "baseline/Joffrey_L2.wav",
       "det": {
         "AASIST": 0.9991512298583984,
         "AASIST-L": 0.9827530980110168,
@@ -379,7 +379,7 @@
       "speaker": "Joffrey",
       "line": 2,
       "arm": "design_a",
-      "file": "MOS TEST RL\\design_a\\Joffrey_L2.wav",
+      "file": "design_a/Joffrey_L2.wav",
       "det": {
         "AASIST": 0.8780581951141357,
         "AASIST-L": 0.44328176975250244,
@@ -406,7 +406,7 @@
       "speaker": "Joffrey",
       "line": 2,
       "arm": "design_b",
-      "file": "MOS TEST RL\\design_b\\Joffrey_L2.wav",
+      "file": "design_b/Joffrey_L2.wav",
       "det": {
         "AASIST": 0.8611903786659241,
         "AASIST-L": 0.7585586309432983,
@@ -433,7 +433,7 @@
       "speaker": "Silco",
       "line": 1,
       "arm": "reference",
-      "file": "MOS TEST RL\\references\\Silco.wav",
+      "file": "references/Silco.wav",
       "prompt_text": "Is there anything so and doing as a daughter, break or forge into something greater? Welcome to my assembly. There's a monster inside all of us. The world's growing smaller every day.",
       "det": {
         "AASIST": 0.005705507937818766,
@@ -453,7 +453,7 @@
       "speaker": "Silco",
       "line": 2,
       "arm": "reference",
-      "file": "MOS TEST RL\\references\\Silco.wav",
+      "file": "references/Silco.wav",
       "prompt_text": "Is there anything so and doing as a daughter, break or forge into something greater? Welcome to my assembly. There's a monster inside all of us. The world's growing smaller every day.",
       "det": {
         "AASIST": 0.005705507937818766,
@@ -473,7 +473,7 @@
       "speaker": "Silco",
       "line": 1,
       "arm": "baseline",
-      "file": "MOS TEST RL\\baseline\\Silco_L1.wav",
+      "file": "baseline/Silco_L1.wav",
       "det": {
         "AASIST": 0.27939265966415405,
         "AASIST-L": 0.0008378763450309634,
@@ -500,7 +500,7 @@
       "speaker": "Silco",
       "line": 1,
       "arm": "design_a",
-      "file": "MOS TEST RL\\design_a\\Silco_L1.wav",
+      "file": "design_a/Silco_L1.wav",
       "det": {
         "AASIST": 3.5756158467847854e-05,
         "AASIST-L": 0.0006918683066032827,
@@ -527,7 +527,7 @@
       "speaker": "Silco",
       "line": 1,
       "arm": "design_b",
-      "file": "MOS TEST RL\\design_b\\Silco_L1.wav",
+      "file": "design_b/Silco_L1.wav",
       "det": {
         "AASIST": 0.0008540345588698983,
         "AASIST-L": 0.001489819842390716,
@@ -554,7 +554,7 @@
       "speaker": "Silco",
       "line": 2,
       "arm": "baseline",
-      "file": "MOS TEST RL\\baseline\\Silco_L2.wav",
+      "file": "baseline/Silco_L2.wav",
       "det": {
         "AASIST": 0.36681830883026123,
         "AASIST-L": 0.0025482173077762127,
@@ -581,7 +581,7 @@
       "speaker": "Silco",
       "line": 2,
       "arm": "design_a",
-      "file": "MOS TEST RL\\design_a\\Silco_L2.wav",
+      "file": "design_a/Silco_L2.wav",
       "det": {
         "AASIST": 0.0008160682045854628,
         "AASIST-L": 0.0006597557221539319,
@@ -608,7 +608,7 @@
       "speaker": "Silco",
       "line": 2,
       "arm": "design_b",
-      "file": "MOS TEST RL\\design_b\\Silco_L2.wav",
+      "file": "design_b/Silco_L2.wav",
       "det": {
         "AASIST": 0.0010479891207069159,
         "AASIST-L": 0.0020435587503015995,
@@ -635,7 +635,7 @@
       "speaker": "Tywin",
       "line": 1,
       "arm": "reference",
-      "file": "MOS TEST RL\\references\\Tywin.wav",
+      "file": "references/Tywin.wav",
       "prompt_text": "The tower of the hound is where I work. The walk from there to here would take time. Time I could otherwise spend.",
       "det": {
         "AASIST": 0.5121750831604004,
@@ -655,7 +655,7 @@
       "speaker": "Tywin",
       "line": 2,
       "arm": "reference",
-      "file": "MOS TEST RL\\references\\Tywin.wav",
+      "file": "references/Tywin.wav",
       "prompt_text": "The tower of the hound is where I work. The walk from there to here would take time. Time I could otherwise spend.",
       "det": {
         "AASIST": 0.5121750831604004,
@@ -675,7 +675,7 @@
       "speaker": "Tywin",
       "line": 1,
       "arm": "baseline",
-      "file": "MOS TEST RL\\baseline\\Tywin_L1.wav",
+      "file": "baseline/Tywin_L1.wav",
       "det": {
         "AASIST": 0.10876865684986115,
         "AASIST-L": 0.5278394818305969,
@@ -702,7 +702,7 @@
       "speaker": "Tywin",
       "line": 1,
       "arm": "design_a",
-      "file": "MOS TEST RL\\design_a\\Tywin_L1.wav",
+      "file": "design_a/Tywin_L1.wav",
       "det": {
         "AASIST": 5.226789198786719e-06,
         "AASIST-L": 1.9612432879512198e-05,
@@ -729,7 +729,7 @@
       "speaker": "Tywin",
       "line": 1,
       "arm": "design_b",
-      "file": "MOS TEST RL\\design_b\\Tywin_L1.wav",
+      "file": "design_b/Tywin_L1.wav",
       "det": {
         "AASIST": 0.023618532344698906,
         "AASIST-L": 0.06798538565635681,
@@ -756,7 +756,7 @@
       "speaker": "Tywin",
       "line": 2,
       "arm": "baseline",
-      "file": "MOS TEST RL\\baseline\\Tywin_L2.wav",
+      "file": "baseline/Tywin_L2.wav",
       "det": {
         "AASIST": 0.991767168045044,
         "AASIST-L": 0.9976681470870972,
@@ -783,7 +783,7 @@
       "speaker": "Tywin",
       "line": 2,
       "arm": "design_a",
-      "file": "MOS TEST RL\\design_a\\Tywin_L2.wav",
+      "file": "design_a/Tywin_L2.wav",
       "det": {
         "AASIST": 0.1501997858285904,
         "AASIST-L": 0.500558078289032,
@@ -810,7 +810,7 @@
       "speaker": "Tywin",
       "line": 2,
       "arm": "design_b",
-      "file": "MOS TEST RL\\design_b\\Tywin_L2.wav",
+      "file": "design_b/Tywin_L2.wav",
       "det": {
         "AASIST": 0.9348169565200806,
         "AASIST-L": 0.9539127349853516,
@@ -837,7 +837,7 @@
       "speaker": "Tywin_2",
       "line": 1,
       "arm": "reference",
-      "file": "MOS TEST RL\\references\\Tywin_2.wav",
+      "file": "references/Tywin_2.wav",
       "prompt_text": "When I was handed the king under your father's predecessor, the skulls of all the Targaryen dragons were kept in this room. The skull of the last of them was right here. It was the size of a couple.",
       "det": {
         "AASIST": 0.5905650854110718,
@@ -857,7 +857,7 @@
       "speaker": "Tywin_2",
       "line": 2,
       "arm": "reference",
-      "file": "MOS TEST RL\\references\\Tywin_2.wav",
+      "file": "references/Tywin_2.wav",
       "prompt_text": "When I was handed the king under your father's predecessor, the skulls of all the Targaryen dragons were kept in this room. The skull of the last of them was right here. It was the size of a couple.",
       "det": {
         "AASIST": 0.5905650854110718,
@@ -877,7 +877,7 @@
       "speaker": "Tywin_2",
       "line": 1,
       "arm": "baseline",
-      "file": "MOS TEST RL\\baseline\\Tywin_2_L1.wav",
+      "file": "baseline/Tywin_2_L1.wav",
       "det": {
         "AASIST": 0.5027241706848145,
         "AASIST-L": 0.3183591663837433,
@@ -904,7 +904,7 @@
       "speaker": "Tywin_2",
       "line": 1,
       "arm": "design_a",
-      "file": "MOS TEST RL\\design_a\\Tywin_2_L1.wav",
+      "file": "design_a/Tywin_2_L1.wav",
       "det": {
         "AASIST": 0.00035375141305848956,
         "AASIST-L": 0.00010868654499063268,
@@ -931,7 +931,7 @@
       "speaker": "Tywin_2",
       "line": 1,
       "arm": "design_b",
-      "file": "MOS TEST RL\\design_b\\Tywin_2_L1.wav",
+      "file": "design_b/Tywin_2_L1.wav",
       "det": {
         "AASIST": 0.2968680262565613,
         "AASIST-L": 0.16774269938468933,
@@ -958,7 +958,7 @@
       "speaker": "Tywin_2",
       "line": 2,
       "arm": "baseline",
-      "file": "MOS TEST RL\\baseline\\Tywin_2_L2.wav",
+      "file": "baseline/Tywin_2_L2.wav",
       "det": {
         "AASIST": 0.24382132291793823,
         "AASIST-L": 0.8997305631637573,
@@ -985,7 +985,7 @@
       "speaker": "Tywin_2",
       "line": 2,
       "arm": "design_a",
-      "file": "MOS TEST RL\\design_a\\Tywin_2_L2.wav",
+      "file": "design_a/Tywin_2_L2.wav",
       "det": {
         "AASIST": 0.0003614773158915341,
         "AASIST-L": 1.5878005797276273e-05,
@@ -1012,7 +1012,7 @@
       "speaker": "Tywin_2",
       "line": 2,
       "arm": "design_b",
-      "file": "MOS TEST RL\\design_b\\Tywin_2_L2.wav",
+      "file": "design_b/Tywin_2_L2.wav",
       "det": {
         "AASIST": 0.0011802748776972294,
         "AASIST-L": 0.31081101298332214,
@@ -1039,7 +1039,7 @@
       "speaker": "ahmed",
       "line": 1,
       "arm": "reference",
-      "file": "MOS TEST RL\\references\\ahmed.wav",
+      "file": "references/ahmed.wav",
       "prompt_text": "Glue the sheet to the dark blue background.",
       "det": {
         "AASIST": 0.9962360858917236,
@@ -1059,7 +1059,7 @@
       "speaker": "ahmed",
       "line": 2,
       "arm": "reference",
-      "file": "MOS TEST RL\\references\\ahmed.wav",
+      "file": "references/ahmed.wav",
       "prompt_text": "Glue the sheet to the dark blue background.",
       "det": {
         "AASIST": 0.9962360858917236,
@@ -1079,7 +1079,7 @@
       "speaker": "ahmed",
       "line": 1,
       "arm": "baseline",
-      "file": "MOS TEST RL\\baseline\\ahmed_L1.wav",
+      "file": "baseline/ahmed_L1.wav",
       "det": {
         "AASIST": 0.9268730878829956,
         "AASIST-L": 0.5134153366088867,
@@ -1106,7 +1106,7 @@
       "speaker": "ahmed",
       "line": 1,
       "arm": "design_a",
-      "file": "MOS TEST RL\\design_a\\ahmed_L1.wav",
+      "file": "design_a/ahmed_L1.wav",
       "det": {
         "AASIST": 0.8710249662399292,
         "AASIST-L": 0.36931750178337097,
@@ -1133,7 +1133,7 @@
       "speaker": "ahmed",
       "line": 1,
       "arm": "design_b",
-      "file": "MOS TEST RL\\design_b\\ahmed_L1.wav",
+      "file": "design_b/ahmed_L1.wav",
       "det": {
         "AASIST": 0.773764431476593,
         "AASIST-L": 0.4320008456707001,
@@ -1160,7 +1160,7 @@
       "speaker": "ahmed",
       "line": 2,
       "arm": "baseline",
-      "file": "MOS TEST RL\\baseline\\ahmed_L2.wav",
+      "file": "baseline/ahmed_L2.wav",
       "det": {
         "AASIST": 0.9964803457260132,
         "AASIST-L": 0.9780343770980835,
@@ -1187,7 +1187,7 @@
       "speaker": "ahmed",
       "line": 2,
       "arm": "design_a",
-      "file": "MOS TEST RL\\design_a\\ahmed_L2.wav",
+      "file": "design_a/ahmed_L2.wav",
       "det": {
         "AASIST": 0.9879553914070129,
         "AASIST-L": 0.9500335454940796,
@@ -1214,7 +1214,7 @@
       "speaker": "ahmed",
       "line": 2,
       "arm": "design_b",
-      "file": "MOS TEST RL\\design_b\\ahmed_L2.wav",
+      "file": "design_b/ahmed_L2.wav",
       "det": {
         "AASIST": 0.9942989349365234,
         "AASIST-L": 0.9635883569717407,
@@ -1241,7 +1241,7 @@
       "speaker": "david",
       "line": 1,
       "arm": "reference",
-      "file": "MOS TEST RL\\references\\david.wav",
+      "file": "references/david.wav",
       "prompt_text": "um. the short stories actually contain. ehm. I think perhapsly more humour than the big long stories. Where she really involved in the plot, but all the humour is of eccentricity. my humour for",
       "det": {
         "AASIST": 0.7411739826202393,
@@ -1261,7 +1261,7 @@
       "speaker": "david",
       "line": 2,
       "arm": "reference",
-      "file": "MOS TEST RL\\references\\david.wav",
+      "file": "references/david.wav",
       "prompt_text": "um. the short stories actually contain. ehm. I think perhapsly more humour than the big long stories. Where she really involved in the plot, but all the humour is of eccentricity. my humour for",
       "det": {
         "AASIST": 0.7411739826202393,
@@ -1281,7 +1281,7 @@
       "speaker": "david",
       "line": 1,
       "arm": "baseline",
-      "file": "MOS TEST RL\\baseline\\david_L1.wav",
+      "file": "baseline/david_L1.wav",
       "det": {
         "AASIST": 0.0024688513949513435,
         "AASIST-L": 0.10636360198259354,
@@ -1308,7 +1308,7 @@
       "speaker": "david",
       "line": 1,
       "arm": "design_a",
-      "file": "MOS TEST RL\\design_a\\david_L1.wav",
+      "file": "design_a/david_L1.wav",
       "det": {
         "AASIST": 0.00018641320639289916,
         "AASIST-L": 0.0012502508470788598,
@@ -1335,7 +1335,7 @@
       "speaker": "david",
       "line": 1,
       "arm": "design_b",
-      "file": "MOS TEST RL\\design_b\\david_L1.wav",
+      "file": "design_b/david_L1.wav",
       "det": {
         "AASIST": 0.0013314203824847937,
         "AASIST-L": 0.03163214027881622,
@@ -1362,7 +1362,7 @@
       "speaker": "david",
       "line": 2,
       "arm": "baseline",
-      "file": "MOS TEST RL\\baseline\\david_L2.wav",
+      "file": "baseline/david_L2.wav",
       "det": {
         "AASIST": 0.20801770687103271,
         "AASIST-L": 0.02458650805056095,
@@ -1389,7 +1389,7 @@
       "speaker": "david",
       "line": 2,
       "arm": "design_a",
-      "file": "MOS TEST RL\\design_a\\david_L2.wav",
+      "file": "design_a/david_L2.wav",
       "det": {
         "AASIST": 0.00020143076835665852,
         "AASIST-L": 9.87957464531064e-05,
@@ -1416,7 +1416,7 @@
       "speaker": "david",
       "line": 2,
       "arm": "design_b",
-      "file": "MOS TEST RL\\design_b\\david_L2.wav",
+      "file": "design_b/david_L2.wav",
       "det": {
         "AASIST": 0.00824256893247366,
         "AASIST-L": 0.07863421738147736,
@@ -1443,7 +1443,7 @@
       "speaker": "evelynn",
       "line": 1,
       "arm": "reference",
-      "file": "MOS TEST RL\\references\\evelynn.wav",
+      "file": "references/evelynn.wav",
       "prompt_text": "That skin looks good on you, but it wouldn't look better on my bedroom floor. I feel their looks like hot breath. They feel my claws like hot knives.",
       "det": {
         "AASIST": 0.013200070708990097,
@@ -1463,7 +1463,7 @@
       "speaker": "evelynn",
       "line": 2,
       "arm": "reference",
-      "file": "MOS TEST RL\\references\\evelynn.wav",
+      "file": "references/evelynn.wav",
       "prompt_text": "That skin looks good on you, but it wouldn't look better on my bedroom floor. I feel their looks like hot breath. They feel my claws like hot knives.",
       "det": {
         "AASIST": 0.013200070708990097,
@@ -1483,7 +1483,7 @@
       "speaker": "evelynn",
       "line": 1,
       "arm": "baseline",
-      "file": "MOS TEST RL\\baseline\\evelynn_L1.wav",
+      "file": "baseline/evelynn_L1.wav",
       "det": {
         "AASIST": 0.49819597601890564,
         "AASIST-L": 0.07920794934034348,
@@ -1510,7 +1510,7 @@
       "speaker": "evelynn",
       "line": 1,
       "arm": "design_a",
-      "file": "MOS TEST RL\\design_a\\evelynn_L1.wav",
+      "file": "design_a/evelynn_L1.wav",
       "det": {
         "AASIST": 0.025430303066968918,
         "AASIST-L": 0.00474206218495965,
@@ -1537,7 +1537,7 @@
       "speaker": "evelynn",
       "line": 1,
       "arm": "design_b",
-      "file": "MOS TEST RL\\design_b\\evelynn_L1.wav",
+      "file": "design_b/evelynn_L1.wav",
       "det": {
         "AASIST": 0.3923056125640869,
         "AASIST-L": 0.014641926623880863,
@@ -1564,7 +1564,7 @@
       "speaker": "evelynn",
       "line": 2,
       "arm": "baseline",
-      "file": "MOS TEST RL\\baseline\\evelynn_L2.wav",
+      "file": "baseline/evelynn_L2.wav",
       "det": {
         "AASIST": 0.9784247279167175,
         "AASIST-L": 0.07355611026287079,
@@ -1591,7 +1591,7 @@
       "speaker": "evelynn",
       "line": 2,
       "arm": "design_a",
-      "file": "MOS TEST RL\\design_a\\evelynn_L2.wav",
+      "file": "design_a/evelynn_L2.wav",
       "det": {
         "AASIST": 0.014128614217042923,
         "AASIST-L": 0.0012242391239851713,
@@ -1618,7 +1618,7 @@
       "speaker": "evelynn",
       "line": 2,
       "arm": "design_b",
-      "file": "MOS TEST RL\\design_b\\evelynn_L2.wav",
+      "file": "design_b/evelynn_L2.wav",
       "det": {
         "AASIST": 0.7549213171005249,
         "AASIST-L": 0.044783297926187515,
@@ -1645,7 +1645,7 @@
       "speaker": "jhin",
       "line": 1,
       "arm": "reference",
-      "file": "MOS TEST RL\\references\\jhin.wav",
+      "file": "references/jhin.wav",
       "prompt_text": "Everyone wears a mask, I just chose to make my own. I get nervous before every performance, but I need that feeling.",
       "det": {
         "AASIST": 0.0013847275404259562,
@@ -1665,7 +1665,7 @@
       "speaker": "jhin",
       "line": 2,
       "arm": "reference",
-      "file": "MOS TEST RL\\references\\jhin.wav",
+      "file": "references/jhin.wav",
       "prompt_text": "Everyone wears a mask, I just chose to make my own. I get nervous before every performance, but I need that feeling.",
       "det": {
         "AASIST": 0.0013847275404259562,
@@ -1685,7 +1685,7 @@
       "speaker": "jhin",
       "line": 1,
       "arm": "baseline",
-      "file": "MOS TEST RL\\baseline\\jhin_L1.wav",
+      "file": "baseline/jhin_L1.wav",
       "det": {
         "AASIST": 0.008939133025705814,
         "AASIST-L": 0.08604501187801361,
@@ -1712,7 +1712,7 @@
       "speaker": "jhin",
       "line": 1,
       "arm": "design_a",
-      "file": "MOS TEST RL\\design_a\\jhin_L1.wav",
+      "file": "design_a/jhin_L1.wav",
       "det": {
         "AASIST": 0.003433840349316597,
         "AASIST-L": 0.030464472249150276,
@@ -1739,7 +1739,7 @@
       "speaker": "jhin",
       "line": 1,
       "arm": "design_b",
-      "file": "MOS TEST RL\\design_b\\jhin_L1.wav",
+      "file": "design_b/jhin_L1.wav",
       "det": {
         "AASIST": 0.0002346593828406185,
         "AASIST-L": 0.002368949120864272,
@@ -1766,7 +1766,7 @@
       "speaker": "jhin",
       "line": 2,
       "arm": "baseline",
-      "file": "MOS TEST RL\\baseline\\jhin_L2.wav",
+      "file": "baseline/jhin_L2.wav",
       "det": {
         "AASIST": 0.5700579881668091,
         "AASIST-L": 0.04843274503946304,
@@ -1793,7 +1793,7 @@
       "speaker": "jhin",
       "line": 2,
       "arm": "design_a",
-      "file": "MOS TEST RL\\design_a\\jhin_L2.wav",
+      "file": "design_a/jhin_L2.wav",
       "det": {
         "AASIST": 0.0021466845646500587,
         "AASIST-L": 2.852861871360801e-05,
@@ -1820,7 +1820,7 @@
       "speaker": "jhin",
       "line": 2,
       "arm": "design_b",
-      "file": "MOS TEST RL\\design_b\\jhin_L2.wav",
+      "file": "design_b/jhin_L2.wav",
       "det": {
         "AASIST": 0.02514743059873581,
         "AASIST-L": 7.628113962709904e-05,
@@ -1847,7 +1847,7 @@
       "speaker": "mordekaiser",
       "line": 1,
       "arm": "reference",
-      "file": "MOS TEST RL\\references\\mordekaiser.wav",
+      "file": "references/mordekaiser.wav",
       "prompt_text": "I carved my kingdom beyond from the ashes of nothing. No mortals, not even gods will see.",
       "det": {
         "AASIST": 0.0026525231078267097,
@@ -1867,7 +1867,7 @@
       "speaker": "mordekaiser",
       "line": 2,
       "arm": "reference",
-      "file": "MOS TEST RL\\references\\mordekaiser.wav",
+      "file": "references/mordekaiser.wav",
       "prompt_text": "I carved my kingdom beyond from the ashes of nothing. No mortals, not even gods will see.",
       "det": {
         "AASIST": 0.0026525231078267097,
@@ -1887,7 +1887,7 @@
       "speaker": "mordekaiser",
       "line": 1,
       "arm": "baseline",
-      "file": "MOS TEST RL\\baseline\\mordekaiser_L1.wav",
+      "file": "baseline/mordekaiser_L1.wav",
       "det": {
         "AASIST": 0.000496302789542824,
         "AASIST-L": 0.7306593060493469,
@@ -1914,7 +1914,7 @@
       "speaker": "mordekaiser",
       "line": 1,
       "arm": "design_a",
-      "file": "MOS TEST RL\\design_a\\mordekaiser_L1.wav",
+      "file": "design_a/mordekaiser_L1.wav",
       "det": {
         "AASIST": 5.1682927733054385e-05,
         "AASIST-L": 0.3628537654876709,
@@ -1941,7 +1941,7 @@
       "speaker": "mordekaiser",
       "line": 1,
       "arm": "design_b",
-      "file": "MOS TEST RL\\design_b\\mordekaiser_L1.wav",
+      "file": "design_b/mordekaiser_L1.wav",
       "det": {
         "AASIST": 0.000255793594988063,
         "AASIST-L": 0.7278046607971191,
@@ -1968,7 +1968,7 @@
       "speaker": "mordekaiser",
       "line": 2,
       "arm": "baseline",
-      "file": "MOS TEST RL\\baseline\\mordekaiser_L2.wav",
+      "file": "baseline/mordekaiser_L2.wav",
       "det": {
         "AASIST": 0.028234513476490974,
         "AASIST-L": 0.7143695950508118,
@@ -1995,7 +1995,7 @@
       "speaker": "mordekaiser",
       "line": 2,
       "arm": "design_a",
-      "file": "MOS TEST RL\\design_a\\mordekaiser_L2.wav",
+      "file": "design_a/mordekaiser_L2.wav",
       "det": {
         "AASIST": 0.004979424178600311,
         "AASIST-L": 0.8599400520324707,
@@ -2022,7 +2022,7 @@
       "speaker": "mordekaiser",
       "line": 2,
       "arm": "design_b",
-      "file": "MOS TEST RL\\design_b\\mordekaiser_L2.wav",
+      "file": "design_b/mordekaiser_L2.wav",
       "det": {
         "AASIST": 0.1684161275625229,
         "AASIST-L": 0.9039616584777832,
@@ -2049,7 +2049,7 @@
       "speaker": "riven",
       "line": 1,
       "arm": "reference",
-      "file": "MOS TEST RL\\references\\riven.wav",
+      "file": "references/riven.wav",
       "prompt_text": "Learn from your mistakes. A sword mirrors its owner. What is broken can be reforged.",
       "det": {
         "AASIST": 0.9632377624511719,
@@ -2069,7 +2069,7 @@
       "speaker": "riven",
       "line": 2,
       "arm": "reference",
-      "file": "MOS TEST RL\\references\\riven.wav",
+      "file": "references/riven.wav",
       "prompt_text": "Learn from your mistakes. A sword mirrors its owner. What is broken can be reforged.",
       "det": {
         "AASIST": 0.9632377624511719,
@@ -2089,7 +2089,7 @@
       "speaker": "riven",
       "line": 1,
       "arm": "baseline",
-      "file": "MOS TEST RL\\baseline\\riven_L1.wav",
+      "file": "baseline/riven_L1.wav",
       "det": {
         "AASIST": 0.5014280080795288,
         "AASIST-L": 0.5203940868377686,
@@ -2116,7 +2116,7 @@
       "speaker": "riven",
       "line": 1,
       "arm": "design_a",
-      "file": "MOS TEST RL\\design_a\\riven_L1.wav",
+      "file": "design_a/riven_L1.wav",
       "det": {
         "AASIST": 0.28697723150253296,
         "AASIST-L": 0.03209506347775459,
@@ -2143,7 +2143,7 @@
       "speaker": "riven",
       "line": 1,
       "arm": "design_b",
-      "file": "MOS TEST RL\\design_b\\riven_L1.wav",
+      "file": "design_b/riven_L1.wav",
       "det": {
         "AASIST": 0.49592745304107666,
         "AASIST-L": 0.04037736356258392,
@@ -2170,7 +2170,7 @@
       "speaker": "riven",
       "line": 2,
       "arm": "baseline",
-      "file": "MOS TEST RL\\baseline\\riven_L2.wav",
+      "file": "baseline/riven_L2.wav",
       "det": {
         "AASIST": 0.9443361759185791,
         "AASIST-L": 0.9379993677139282,
@@ -2197,7 +2197,7 @@
       "speaker": "riven",
       "line": 2,
       "arm": "design_a",
-      "file": "MOS TEST RL\\design_a\\riven_L2.wav",
+      "file": "design_a/riven_L2.wav",
       "det": {
         "AASIST": 0.40401598811149597,
         "AASIST-L": 0.13181477785110474,
@@ -2224,7 +2224,7 @@
       "speaker": "riven",
       "line": 2,
       "arm": "design_b",
-      "file": "MOS TEST RL\\design_b\\riven_L2.wav",
+      "file": "design_b/riven_L2.wav",
       "det": {
         "AASIST": 0.3798997700214386,
         "AASIST-L": 0.707291841506958,
@@ -2251,7 +2251,7 @@
       "speaker": "samira",
       "line": 1,
       "arm": "reference",
-      "file": "MOS TEST RL\\references\\samira.wav",
+      "file": "references/samira.wav",
       "prompt_text": "Listen up you sorry lot. Only one rule for this mission. Take no prisoners.",
       "det": {
         "AASIST": 0.0506448931992054,
@@ -2271,7 +2271,7 @@
       "speaker": "samira",
       "line": 2,
       "arm": "reference",
-      "file": "MOS TEST RL\\references\\samira.wav",
+      "file": "references/samira.wav",
       "prompt_text": "Listen up you sorry lot. Only one rule for this mission. Take no prisoners.",
       "det": {
         "AASIST": 0.0506448931992054,
@@ -2291,7 +2291,7 @@
       "speaker": "samira",
       "line": 1,
       "arm": "baseline",
-      "file": "MOS TEST RL\\baseline\\samira_L1.wav",
+      "file": "baseline/samira_L1.wav",
       "det": {
         "AASIST": 0.8562054634094238,
         "AASIST-L": 0.35824790596961975,
@@ -2318,7 +2318,7 @@
       "speaker": "samira",
       "line": 1,
       "arm": "design_a",
-      "file": "MOS TEST RL\\design_a\\samira_L1.wav",
+      "file": "design_a/samira_L1.wav",
       "det": {
         "AASIST": 0.6782926917076111,
         "AASIST-L": 0.1809149980545044,
@@ -2345,7 +2345,7 @@
       "speaker": "samira",
       "line": 1,
       "arm": "design_b",
-      "file": "MOS TEST RL\\design_b\\samira_L1.wav",
+      "file": "design_b/samira_L1.wav",
       "det": {
         "AASIST": 0.339796781539917,
         "AASIST-L": 0.040397778153419495,
@@ -2372,7 +2372,7 @@
       "speaker": "samira",
       "line": 2,
       "arm": "baseline",
-      "file": "MOS TEST RL\\baseline\\samira_L2.wav",
+      "file": "baseline/samira_L2.wav",
       "det": {
         "AASIST": 0.9970740079879761,
         "AASIST-L": 0.7680898308753967,
@@ -2399,7 +2399,7 @@
       "speaker": "samira",
       "line": 2,
       "arm": "design_a",
-      "file": "MOS TEST RL\\design_a\\samira_L2.wav",
+      "file": "design_a/samira_L2.wav",
       "det": {
         "AASIST": 0.1992534101009369,
         "AASIST-L": 0.012887725606560707,
@@ -2426,7 +2426,7 @@
       "speaker": "samira",
       "line": 2,
       "arm": "design_b",
-      "file": "MOS TEST RL\\design_b\\samira_L2.wav",
+      "file": "design_b/samira_L2.wav",
       "det": {
         "AASIST": 0.966496467590332,
         "AASIST-L": 0.49462491273880005,
@@ -2453,7 +2453,7 @@
       "speaker": "swain",
       "line": 1,
       "arm": "reference",
-      "file": "MOS TEST RL\\references\\swain.wav",
+      "file": "references/swain.wav",
       "prompt_text": "You can sit on a throne. That doesn't make you a ruler. It only means you have an ask. If they already call me a villain, what would they call me when I succeed?",
       "det": {
         "AASIST": 0.0008445456624031067,
@@ -2473,7 +2473,7 @@
       "speaker": "swain",
       "line": 2,
       "arm": "reference",
-      "file": "MOS TEST RL\\references\\swain.wav",
+      "file": "references/swain.wav",
       "prompt_text": "You can sit on a throne. That doesn't make you a ruler. It only means you have an ask. If they already call me a villain, what would they call me when I succeed?",
       "det": {
         "AASIST": 0.0008445456624031067,
@@ -2493,7 +2493,7 @@
       "speaker": "swain",
       "line": 1,
       "arm": "baseline",
-      "file": "MOS TEST RL\\baseline\\swain_L1.wav",
+      "file": "baseline/swain_L1.wav",
       "det": {
         "AASIST": 0.5156816840171814,
         "AASIST-L": 0.029715921729803085,
@@ -2520,7 +2520,7 @@
       "speaker": "swain",
       "line": 1,
       "arm": "design_a",
-      "file": "MOS TEST RL\\design_a\\swain_L1.wav",
+      "file": "design_a/swain_L1.wav",
       "det": {
         "AASIST": 0.0019368082284927368,
         "AASIST-L": 0.004426457919180393,
@@ -2547,7 +2547,7 @@
       "speaker": "swain",
       "line": 1,
       "arm": "design_b",
-      "file": "MOS TEST RL\\design_b\\swain_L1.wav",
+      "file": "design_b/swain_L1.wav",
       "det": {
         "AASIST": 0.003585635684430599,
         "AASIST-L": 0.006859919056296349,
@@ -2574,7 +2574,7 @@
       "speaker": "swain",
       "line": 2,
       "arm": "baseline",
-      "file": "MOS TEST RL\\baseline\\swain_L2.wav",
+      "file": "baseline/swain_L2.wav",
       "det": {
         "AASIST": 0.508985698223114,
         "AASIST-L": 0.014206486754119396,
@@ -2601,7 +2601,7 @@
       "speaker": "swain",
       "line": 2,
       "arm": "design_a",
-      "file": "MOS TEST RL\\design_a\\swain_L2.wav",
+      "file": "design_a/swain_L2.wav",
       "det": {
         "AASIST": 0.02002466842532158,
         "AASIST-L": 6.979094177950174e-05,
@@ -2628,7 +2628,7 @@
       "speaker": "swain",
       "line": 2,
       "arm": "design_b",
-      "file": "MOS TEST RL\\design_b\\swain_L2.wav",
+      "file": "design_b/swain_L2.wav",
       "det": {
         "AASIST": 0.03584715351462364,
         "AASIST-L": 0.0005143358139321208,
@@ -2655,7 +2655,7 @@
       "speaker": "tahmkench",
       "line": 1,
       "arm": "reference",
-      "file": "MOS TEST RL\\references\\tahmkench.wav",
+      "file": "references/tahmkench.wav",
       "prompt_text": "War is a manly appetite and your directness has my admiration. I am enthralled by your class and refinement. I must offer you a token of my admirations.",
       "det": {
         "AASIST": 0.0003965975483879447,
@@ -2675,7 +2675,7 @@
       "speaker": "tahmkench",
       "line": 2,
       "arm": "reference",
-      "file": "MOS TEST RL\\references\\tahmkench.wav",
+      "file": "references/tahmkench.wav",
       "prompt_text": "War is a manly appetite and your directness has my admiration. I am enthralled by your class and refinement. I must offer you a token of my admirations.",
       "det": {
         "AASIST": 0.0003965975483879447,
@@ -2695,7 +2695,7 @@
       "speaker": "tahmkench",
       "line": 1,
       "arm": "baseline",
-      "file": "MOS TEST RL\\baseline\\tahmkench_L1.wav",
+      "file": "baseline/tahmkench_L1.wav",
       "det": {
         "AASIST": 0.058787520974874496,
         "AASIST-L": 0.10132095217704773,
@@ -2722,7 +2722,7 @@
       "speaker": "tahmkench",
       "line": 1,
       "arm": "design_a",
-      "file": "MOS TEST RL\\design_a\\tahmkench_L1.wav",
+      "file": "design_a/tahmkench_L1.wav",
       "det": {
         "AASIST": 0.012185695581138134,
         "AASIST-L": 0.3293285369873047,
@@ -2749,7 +2749,7 @@
       "speaker": "tahmkench",
       "line": 1,
       "arm": "design_b",
-      "file": "MOS TEST RL\\design_b\\tahmkench_L1.wav",
+      "file": "design_b/tahmkench_L1.wav",
       "det": {
         "AASIST": 0.051341500133275986,
         "AASIST-L": 0.2976236343383789,
@@ -2776,7 +2776,7 @@
       "speaker": "tahmkench",
       "line": 2,
       "arm": "baseline",
-      "file": "MOS TEST RL\\baseline\\tahmkench_L2.wav",
+      "file": "baseline/tahmkench_L2.wav",
       "det": {
         "AASIST": 0.5174292325973511,
         "AASIST-L": 0.09229588508605957,
@@ -2803,7 +2803,7 @@
       "speaker": "tahmkench",
       "line": 2,
       "arm": "design_a",
-      "file": "MOS TEST RL\\design_a\\tahmkench_L2.wav",
+      "file": "design_a/tahmkench_L2.wav",
       "det": {
         "AASIST": 0.001258519827388227,
         "AASIST-L": 0.006681238301098347,
@@ -2830,7 +2830,7 @@
       "speaker": "tahmkench",
       "line": 2,
       "arm": "design_b",
-      "file": "MOS TEST RL\\design_b\\tahmkench_L2.wav",
+      "file": "design_b/tahmkench_L2.wav",
       "det": {
         "AASIST": 0.04649638757109642,
         "AASIST-L": 0.043163273483514786,
@@ -2857,7 +2857,7 @@
       "speaker": "thresh",
       "line": 1,
       "arm": "reference",
-      "file": "MOS TEST RL\\references\\thresh.wav",
+      "file": "references/thresh.wav",
       "prompt_text": "Screening won't do you any good, but it's music to my ears.",
       "det": {
         "AASIST": 0.005402646493166685,
@@ -2877,7 +2877,7 @@
       "speaker": "thresh",
       "line": 2,
       "arm": "reference",
-      "file": "MOS TEST RL\\references\\thresh.wav",
+      "file": "references/thresh.wav",
       "prompt_text": "Screening won't do you any good, but it's music to my ears.",
       "det": {
         "AASIST": 0.005402646493166685,
@@ -2897,7 +2897,7 @@
       "speaker": "thresh",
       "line": 1,
       "arm": "baseline",
-      "file": "MOS TEST RL\\baseline\\thresh_L1.wav",
+      "file": "baseline/thresh_L1.wav",
       "det": {
         "AASIST": 0.014005367644131184,
         "AASIST-L": 0.3586331903934479,
@@ -2924,7 +2924,7 @@
       "speaker": "thresh",
       "line": 1,
       "arm": "design_a",
-      "file": "MOS TEST RL\\design_a\\thresh_L1.wav",
+      "file": "design_a/thresh_L1.wav",
       "det": {
         "AASIST": 0.0014556943206116557,
         "AASIST-L": 0.020575707778334618,
@@ -2951,7 +2951,7 @@
       "speaker": "thresh",
       "line": 1,
       "arm": "design_b",
-      "file": "MOS TEST RL\\design_b\\thresh_L1.wav",
+      "file": "design_b/thresh_L1.wav",
       "det": {
         "AASIST": 0.004941221326589584,
         "AASIST-L": 0.2589164078235626,
@@ -2978,7 +2978,7 @@
       "speaker": "thresh",
       "line": 2,
       "arm": "baseline",
-      "file": "MOS TEST RL\\baseline\\thresh_L2.wav",
+      "file": "baseline/thresh_L2.wav",
       "det": {
         "AASIST": 0.9535837173461914,
         "AASIST-L": 0.9914941787719727,
@@ -3005,7 +3005,7 @@
       "speaker": "thresh",
       "line": 2,
       "arm": "design_a",
-      "file": "MOS TEST RL\\design_a\\thresh_L2.wav",
+      "file": "design_a/thresh_L2.wav",
       "det": {
         "AASIST": 0.003230490954592824,
         "AASIST-L": 0.3025586009025574,
@@ -3032,7 +3032,7 @@
       "speaker": "thresh",
       "line": 2,
       "arm": "design_b",
-      "file": "MOS TEST RL\\design_b\\thresh_L2.wav",
+      "file": "design_b/thresh_L2.wav",
       "det": {
         "AASIST": 0.1130376085639,
         "AASIST-L": 0.823981761932373,
