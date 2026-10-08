@@ -279,6 +279,59 @@ that is worse than doing nothing.
 
 ---
 
+## A sharper test: two lines, 30 paired items
+
+The replication above used one sentence and 15 voices. Repeating it with two
+sentences in different registers, and the 400-iteration checkpoints, doubles
+the paired sample to 30 and changes one conclusion.
+
+Line 1 is held out from every training set (`textbank.EVAL_TEXTS`):
+*"Whatever happens tomorrow, remember that the tide comes in twice and asks
+nobody first."* Line 2 is declamatory: *"Beyond heaven and earth, He alone was
+the honored one. The one to stand above all the other men."* Both lines are
+harder than the earlier sentence, with an unedited soft-min of 0.185 against
+0.307.
+
+| arm | soft-min | vs baseline | t | p | improved | d PESQ |
+|---|---|---|---|---|---|---|
+| baseline | 0.185 | -- | -- | -- | -- | -- |
+| Design A | 0.085 | -0.100 | -4.34 | 0.0002 | 1 / 30 | -0.649 |
+| **Design B** | 0.135 | **-0.050** | **-4.89** | **<0.0001** | **3 / 30** | -0.178 |
+
+### Design B is mildly harmful, not neutral
+
+This revises the earlier characterisation. Design B's *training* trend is a
+well-powered null and that stands: slope +0.000023 at t = +0.32 over 400
+iterations. But measured end to end on held-out sentences, with enough paired
+samples to resolve it, the deployed policy is **significantly worse than doing
+nothing**: -0.050 soft-min at t = -4.89, improving only 3 of 30 items.
+
+This is a sharpening rather than a reversal. The sign was always negative and
+the project simply lacked the power to say so:
+
+| evaluation | n | effect | t | significant |
+|---|---|---|---|---|
+| held-out voices (section 5) | 36 clips | -0.0095 mean detector | -0.80 | no |
+| one sentence, 15 voices | 15 | +0.007 soft-min | +0.62 | no |
+| **two lines, 15 voices** | **30** | **-0.050 soft-min** | **-4.89** | **yes** |
+
+The single-sentence test pointed the other way by +0.007, which is a reminder
+that a null at n = 15 is weak evidence of absence. The honest statement is now
+that **neither RL design is neutral: Design A is badly harmful and Design B is
+mildly harmful**, and the gap between them is the degree, not the direction.
+
+Design A also costs real perceptual quality for this, -0.649 PESQ, against
+Design B's -0.178.
+
+By line, the pattern holds in both registers:
+
+| | baseline | Design A | Design B |
+|---|---|---|---|
+| line 1, conversational | 0.139 | 0.059 | 0.083 |
+| line 2, declamatory | 0.231 | 0.110 | 0.187 |
+
+---
+
 ## Reproducing
 
 ```python

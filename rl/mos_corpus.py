@@ -45,8 +45,16 @@ from eval_generalization import all_voices
 from rl.common import load_policy, load_voice
 from scorecard import score_clip
 
-TEXT = ("The sky shun bright with a beautifull velvet blue. "
-        "So long have I waited for such a sight")
+# Two lines per voice, in different registers. The first is held out from
+# every training set (textbank.EVAL_TEXTS), so neither policy has seen it; the
+# second is declamatory, which stresses a different part of the synthesiser.
+# A listener who hears only one register is rating that register, not the edit.
+TEXTS = [
+    "Whatever happens tomorrow, remember that the tide comes in twice "
+    "and asks nobody first.",
+    "Beyond heaven and earth, He alone was the honored one. "
+    "The one to stand above all the other men.",
+]
 
 # label -> (run id, checkpoint, what it is)
 ARMS = {
@@ -66,7 +74,7 @@ def main() -> int:
     ap.add_argument("--out-dir", default="MOS TEST RL")
     ap.add_argument("--voices", nargs="*", default=None)
     ap.add_argument("--arms", nargs="*", default=None)
-    ap.add_argument("--text", default=TEXT)
+    ap.add_argument("--texts", nargs="+", default=TEXTS)
     ap.add_argument("--seed", type=int, default=1234)
     ap.add_argument("--device", default=None)
     ap.add_argument("--no-quality", action="store_true")
@@ -92,50 +100,63 @@ def main() -> int:
         adapters[label] = adapter
         print(f"  {label:<10} {run}/{ckpt}  [{kind}]")
 
-    print(f"\n{len(voices)} voices x {len(arms)} arms = "
-          f"{len(voices) * len(arms)} clips")
-    print(f'text: "{args.text}"\n', flush=True)
+    print(f"\n{len(voices)} voices x {len(args.texts)} lines x {len(arms)} arms"
+          f" = {len(voices) * len(args.texts) * len(arms)} clips")
+    for i, t in enumerate(args.texts, 1):
+        print(f'  line {i}: "{t}"')
+    print(flush=True)
 
     clips = []
     for vi, voice in enumerate(voices):
         ref, prompt = load_voice(voice)
         rp = root / "references" / f"{voice}.wav"
         shutil.copy2(ref, rp)
-        clips.append({"voice": voice, "arm": "reference",
-                      "file": f"references/{voice}.wav", "prompt_text": prompt,
-                      **score_clip(rp, device=device, quality=not args.no_quality)})
+        ref_scores = score_clip(rp, device=device, quality=not args.no_quality)
+        for ti in range(len(args.texts)):
+            clips.append({"voice": f"{voice} line {ti + 1}", "speaker": voice,
+                          "line": ti + 1, "arm": "reference",
+                          "file": f"references/{voice}.wav",
+                          "prompt_text": prompt, **ref_scores})
 
         cloners.enroll(ref, "CosyVoice2", prompt_text=prompt, alias=voice,
                        device=device)
         ref_emb = Tester.speaker_embedding(ref)
-        seed = args.seed + vi            # one seed for the whole voice
-        line = f"  [{vi + 1}/{len(voices)}] {voice:<13}"
+        from mel_policy import mel_edit_hook
 
-        for label, adapter in adapters.items():
-            torch.manual_seed(seed)
-            if torch.cuda.is_available():
-                torch.cuda.manual_seed_all(seed)
-            p = root / label / f"{voice}.wav"
-            from mel_policy import mel_edit_hook
-            if adapter is None:
-                cloners.generate(args.text, ref, model="CosyVoice2",
-                                 out_path=p, device=device)
-            else:
-                with mel_edit_hook(cosy.model, adapter, deterministic=True,
-                                   device=device):
-                    cloners.generate(args.text, ref, model="CosyVoice2",
-                                     out_path=p, device=device)
-            s = score_clip(p, reference=ref, text=args.text, device=device,
-                           ref_embedding=ref_emb, quality=not args.no_quality)
-            clips.append({"voice": voice, "arm": label,
-                          "file": f"{label}/{voice}.wav", **s})
-            line += f" {label.split('_')[-1]} {s.get('softmin', float('nan')):.2f}"
-            if torch.cuda.is_available():
-                torch.cuda.empty_cache()
-        print(line, flush=True)
+        for ti, text in enumerate(args.texts):
+            # one seed per (voice, line): the three arms of a line replay the
+            # same tokens and the same vocoder noise, so the mel edit is the
+            # only difference between them
+            seed = args.seed + vi * 10 + ti
+            item = f"{voice} line {ti + 1}"
+            line = f"  [{vi + 1}/{len(voices)}] {item:<22}"
+
+            for label, adapter in adapters.items():
+                torch.manual_seed(seed)
+                if torch.cuda.is_available():
+                    torch.cuda.manual_seed_all(seed)
+                rel = f"{label}/{voice}_L{ti + 1}.wav"
+                pth = root / rel
+                if adapter is None:
+                    cloners.generate(text, ref, model="CosyVoice2",
+                                     out_path=pth, device=device)
+                else:
+                    with mel_edit_hook(cosy.model, adapter, deterministic=True,
+                                       device=device):
+                        cloners.generate(text, ref, model="CosyVoice2",
+                                         out_path=pth, device=device)
+                s = score_clip(pth, reference=ref, text=text, device=device,
+                               ref_embedding=ref_emb,
+                               quality=not args.no_quality)
+                clips.append({"voice": item, "speaker": voice, "line": ti + 1,
+                              "arm": label, "file": rel, **s})
+                line += f" {label.split('_')[-1]} {s.get('softmin', float('nan')):.2f}"
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+            print(line, flush=True)
 
     payload = {
-        "text": args.text, "seed": args.seed,
+        "texts": list(args.texts), "text": args.texts[0], "seed": args.seed,
         "note": ("Reinforcement-learning arms only. All arms for a voice share "
                  "one seed, so the mel edit is the only difference between "
                  "them. 1 = human on every detector; soft-min is the worst "
