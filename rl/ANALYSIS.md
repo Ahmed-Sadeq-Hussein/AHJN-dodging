@@ -198,6 +198,61 @@ Two changes would restore RL as the right choice rather than a worse one:
 
 ---
 
+## Extending both runs to 400 iterations
+
+Both designs were resumed from their last checkpoints and trained to 400
+iterations, to test whether either result was an artefact of stopping early.
+Design A gained 270 iterations (129 -> 400); Design B only 5, because its
+counter was already at 395 across two sessions, so its figures below are
+effectively unchanged and are reported for completeness rather than as new
+evidence.
+
+### Design A: the degradation is not an early-training transient
+
+| | at 130 iterations | at 400 iterations |
+|---|---|---|
+| reward slope | -0.000727 | -0.000203 |
+| t | -7.26 | **-8.18** |
+| reward, first -> last | 0.188 -> 0.065 | 0.188 -> 0.104 |
+
+The slope **magnitude** falls because the steep early decline is now averaged
+over a longer, flatter tail. That is not a recovery. Two readings make this
+unambiguous.
+
+Fitting the trend to the NEW 270 iterations alone, ignoring everything that
+came before:
+
+> slope = **-0.000168**, **t = -3.49**
+
+Still significantly downward on data the earlier conclusion never saw. And
+the reward keeps falling in thirds:
+
+| iterations | mean reward |
+|---|---|
+| 1 - 130 | 0.118 |
+| 131 - 260 | 0.092 |
+| 261 - 400 | **0.068** |
+
+Tripling the training budget made Design A monotonically worse. This matters
+for how strongly the section 3 conclusion can be stated: the failure is not
+"the run stopped before it turned around", it is a policy descending a
+gradient that points the wrong way, and it descends for as long as you let it.
+The cause is the aggregator, and no amount of training changes which detectors
+the objective pays attention to.
+
+### Design B: unchanged
+
+| | at 315 rows | at 400 iterations |
+|---|---|---|
+| reward slope | +0.000033 | +0.000023 |
+| t | +0.46 | +0.32 |
+| soft-min slope | -- | +0.000013 (t = +0.34) |
+
+Five additional iterations cannot move a 400-point trend and did not. The null
+stands exactly where it did.
+
+---
+
 ## Replication on an unseen sentence
 
 The corpus built by `python -m rl.mos_corpus` is an independent check: a line
