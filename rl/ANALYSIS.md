@@ -364,7 +364,11 @@ Paired against the same item unedited:
 | Design B | -0.467 | -3.12 | 0.0041 | 12 / 30 | -0.57 |
 
 Wilcoxon agrees with every one of these, so the result does not rest on
-treating a five-point scale as an interval.
+treating a five-point scale as an interval. Neither does it rest on the scale
+at all: a sign test gives p = 1.5e-08 for Design A (27 worse, 0 better) and
+p = 2.8e-04 for Design B (16 worse, 1 better, 13 tied). A bootstrap over items
+puts the MOS loss at [-1.77, -1.13] for Design A and [-1.10, -0.47] for
+Design B, and in 20000 resamples neither reached zero.
 
 ### Both designs are dominated, not trading
 
@@ -388,17 +392,42 @@ A at t = +5.13 and +0.471 PESQ at t = +6.80, but that is a ranking between two
 losses. It remains significantly worse than doing nothing on all four
 measures.
 
-### The listener and the detectors agree
+### The listener and the detectors agree on the arms, and on nothing finer
 
 Pooling all 90 clips, MOS and the soft-min detector score correlate at
-r = +0.25 (p = 0.018), Spearman rho = +0.32 (p = 0.002). PMOS and the speaker
-embedding similarity correlate at r = +0.32 (p = 0.002).
+r = +0.25 (p = 0.018). Taken at face value that would say the soft-min tracks
+what a person hears, which would be the one positive result in the section,
+because the soft-min was adopted as a stand-in for "reads as human" and had
+never been checked against a person.
 
-This is worth separating from the rest, because it is the only positive
-finding in the section and it is about the method rather than the policies.
-The soft-min was adopted as a stand-in for "reads as human", and it had never
-been checked against a person. It tracks what a listener hears. The objective
-was a reasonable thing to optimise; the optimisation is what failed.
+It does not survive the obvious check. The three arms differ in MOS and in
+soft-min by construction, so pooling across them lets the arm means alone
+produce a correlation. Removing that between-arm variance removes the effect:
+
+| | r | p |
+|---|---|---|
+| pooled, all 90 clips | +0.25 | 0.018 |
+| within the unedited arm | +0.27 | 0.145 |
+| within Design A | +0.31 | 0.090 |
+| within Design B | **-0.12** | 0.519 |
+| arm-centred pool, within-arm only | +0.17 | 0.110 |
+
+Nor does the damage covary clip by clip: the correlation between how much an
+edit cost MOS and how much it cost soft-min is +0.24 (p = 0.20) for Design A
+and +0.17 (p = 0.36) for Design B.
+
+So the honest statement is the weak one. The two measures put the three arms
+in the same order, which is three points and could happen by chance about one
+time in six. Within an arm, knowing a clip's soft-min tells you nothing about
+how human it sounds to a person. **This project still has no evidence that the
+soft-min tracks human judgement at the level of a single clip**, which is the
+level every optimisation in it operated at. Establishing that would need
+clips spread across the soft-min range inside one condition, rated blind, by
+more than one listener.
+
+The same caution applies to PMOS against speaker-embedding similarity, pooled
+r = +0.32 (p = 0.002), which has not been decomposed the same way and should
+not be quoted as agreement either.
 
 ### By line
 
@@ -427,7 +456,9 @@ The glitch question was answered on 5 of the 90 clips, which is too few to
 carry anything, and nothing above rests on it.
 
 Figure 20 is `graphs/20_mos_rl.png`, drawn by `plot_mos.py` from
-`MOS TEST RL/mos_ratings.json`.
+`MOS TEST RL/mos_ratings.json`. `python plot_mos.py --split` also writes each
+panel on its own: `20a_mos.png`, `20b_mos_paired.png`, `20c_pmos.png`,
+`20d_dominance.png` and `20e_agreement.png`.
 
 ---
 
