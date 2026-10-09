@@ -332,6 +332,105 @@ By line, the pattern holds in both registers:
 
 ---
 
+## The listening test: what a person said
+
+Everything above is measured by the detectors, by PESQ, or by a speaker
+embedding. None of it is a human judgement, and the project's claim is about
+whether a clone reads as human. The listening test is the one piece of
+evidence that does not come from a network.
+
+Thirty items, the 15 voices in both registers, each rated on all three arms:
+MOS for how human it sounds and PMOS for how much it is still the character,
+both on the 1 to 5 scale of ITU-T P.800. The three arms of an item share a
+seed, so the Mel edit is the only thing that differs between them, and the
+comparison is paired item by item.
+
+| arm | MOS | PMOS | soft-min | PESQ | sim |
+|---|---|---|---|---|---|
+| unedited | **3.97** | **3.67** | **0.185** | **3.47** | **0.826** |
+| Design A | 2.53 | 3.03 | 0.085 | 2.82 | 0.808 |
+| Design B | 3.20 | 3.20 | 0.135 | 3.29 | 0.819 |
+
+Paired against the same item unedited:
+
+| | d MOS | t | p | rated worse | dz |
+|---|---|---|---|---|---|
+| Design A | **-1.433** | -8.75 | 1.3e-09 | 27 / 30 | -1.60 |
+| Design B | **-0.767** | -4.68 | 6.2e-05 | 16 / 30 | -0.85 |
+
+| | d PMOS | t | p | rated worse | dz |
+|---|---|---|---|---|---|
+| Design A | -0.633 | -5.19 | 1.5e-05 | 18 / 30 | -0.95 |
+| Design B | -0.467 | -3.12 | 0.0041 | 12 / 30 | -0.57 |
+
+Wilcoxon agrees with every one of these, so the result does not rest on
+treating a five-point scale as an interval.
+
+### Both designs are dominated, not trading
+
+This is the part that settles the question. A design that bought evasion by
+damaging the audio would sit on a frontier: it would cost MOS and return
+soft-min, and the argument would be about whether the exchange rate is worth
+paying. That argument is not available here. Both designs move the wrong way
+on **both** axes at once:
+
+| | MOS | soft-min |
+|---|---|---|
+| Design A | -1.433 | -0.100 |
+| Design B | -0.767 | -0.050 |
+
+They sound worse to a listener **and** they are easier for the detectors.
+Nothing is being exchanged for anything. In figure 20 panel C the quadrant
+that would hold an improvement, better than unedited on both axes, is empty.
+
+Design B is the less bad of the two by a clear margin, +0.667 MOS over Design
+A at t = +5.13 and +0.471 PESQ at t = +6.80, but that is a ranking between two
+losses. It remains significantly worse than doing nothing on all four
+measures.
+
+### The listener and the detectors agree
+
+Pooling all 90 clips, MOS and the soft-min detector score correlate at
+r = +0.25 (p = 0.018), Spearman rho = +0.32 (p = 0.002). PMOS and the speaker
+embedding similarity correlate at r = +0.32 (p = 0.002).
+
+This is worth separating from the rest, because it is the only positive
+finding in the section and it is about the method rather than the policies.
+The soft-min was adopted as a stand-in for "reads as human", and it had never
+been checked against a person. It tracks what a listener hears. The objective
+was a reasonable thing to optimise; the optimisation is what failed.
+
+### By line
+
+The pattern is the same in both registers, so it is not an artefact of one
+sentence:
+
+| | unedited | Design A | Design B |
+|---|---|---|---|
+| MOS, line 1 conversational | 3.93 | 2.53 | 3.20 |
+| MOS, line 2 declamatory | 4.00 | 2.53 | 3.20 |
+| PMOS, line 1 | 3.60 | 3.00 | 3.20 |
+| PMOS, line 2 | 3.73 | 3.07 | 3.20 |
+
+### What this evidence cannot carry
+
+One rater. A MOS figure is conventionally a mean over several listeners, and a
+single rater cannot separate "these clips are worse" from "this listener marks
+harshly". The pairing is what keeps the comparison valid: the same person
+rated all three arms of every item in one session, against clips that differ
+only by the edit, so the **differences** are sound even though the absolute
+values are not population MOS. Report it as a single-rater paired comparison
+and say so. With effects of this size, dz = -1.60 for Design A, the direction
+is not in question, only the precision.
+
+The glitch question was answered on 5 of the 90 clips, which is too few to
+carry anything, and nothing above rests on it.
+
+Figure 20 is `graphs/20_mos_rl.png`, drawn by `plot_mos.py` from
+`MOS TEST RL/mos_ratings.json`.
+
+---
+
 ## Reproducing
 
 ```python
