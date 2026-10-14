@@ -1,3 +1,4 @@
+# Project made by AHJN . Ahmed Hussein and Julius Norén.  All rights reserved
 r"""
 prosody.py -- the style variants tested in the "does dramatising help?" experiment.
 

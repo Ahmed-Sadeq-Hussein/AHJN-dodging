@@ -1,3 +1,4 @@
+# Project made by AHJN . Ahmed Hussein and Julius Norén.  All rights reserved
 r"""
 textbank.py -- the sentences used for training and evaluation, kept apart.
 

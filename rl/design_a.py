@@ -1,3 +1,4 @@
+# Project made by AHJN . Ahmed Hussein and Julius Norén.  All rights reserved
 r"""
 rl.design_a -- Design A, PPO with Lagrangian constraints.
 

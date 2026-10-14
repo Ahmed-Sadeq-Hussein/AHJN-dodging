@@ -1,3 +1,4 @@
+# Project made by AHJN . Ahmed Hussein and Julius Norén.  All rights reserved
 r"""
 plot_qc_frontier.py -- figure 19: the frontier after constraining the teacher.
 

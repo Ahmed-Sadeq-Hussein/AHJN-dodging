@@ -1,3 +1,4 @@
+# Project made by AHJN . Ahmed Hussein and Julius Norén.  All rights reserved
 r"""
 eval_ab_voices.py -- head-to-head evaluation of the BEST Design A and the BEST
 Design B checkpoint on a set of voices. RUN IN THE "voiceclone" ENV.

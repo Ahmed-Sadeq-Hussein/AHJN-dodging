@@ -1,3 +1,4 @@
+# Project made by AHJN . Ahmed Hussein and Julius Norén.  All rights reserved
 r"""
 train_sac_mel.py -- Design B. RUN IN THE "voiceclone" ENV.
 

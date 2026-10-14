@@ -1,3 +1,4 @@
+# Project made by AHJN . Ahmed Hussein and Julius Norén.  All rights reserved
 r"""
 plot_longform.py -- figure 18: long audio under the global-file objective.
 

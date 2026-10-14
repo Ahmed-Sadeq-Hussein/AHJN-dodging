@@ -1,3 +1,4 @@
+# Project made by AHJN . Ahmed Hussein and Julius Norén.  All rights reserved
 r"""
 distill.py -- train the actor to predict PGD's edit by regression.
 RUN IN "voiceclone", and NOT while collect_pgd.py is still running: two

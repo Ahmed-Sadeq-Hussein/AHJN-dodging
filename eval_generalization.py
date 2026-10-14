@@ -1,3 +1,4 @@
+# Project made by AHJN . Ahmed Hussein and Julius Norén.  All rights reserved
 r"""
 eval_generalization.py -- does the learned edit help ONLY the voices it was
 trained on, or does it transfer? RUN IN THE "voiceclone" ENV.

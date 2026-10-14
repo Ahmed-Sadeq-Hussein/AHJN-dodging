@@ -1,3 +1,4 @@
+# Project made by AHJN . Ahmed Hussein and Julius Norén.  All rights reserved
 r"""
 eval_policy.py -- does a trained policy actually beat no policy at all?
 RUN IN THE "voiceclone" ENV.

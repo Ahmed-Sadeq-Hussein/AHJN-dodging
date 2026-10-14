@@ -1,3 +1,4 @@
+# Project made by AHJN . Ahmed Hussein and Julius Norén.  All rights reserved
 r"""
 diffscore.py -- the differentiable path from a mel to detector scores.
 
@@ -146,7 +147,7 @@ def detector_margins(wav24: torch.Tensor, device, names=None,
     The margin is the pre-softmax difference. At P = 1e-6 it sits at -11.6 and
     still moves linearly, so gradient descent can work on it. This is the
     standard fix for saturated classifiers in adversarial attacks (Carlini &
-    Wagner 2017, arXiv:1608.04644 §V-A).
+    Wagner 2017, arXiv:1608.04644 section V-A).
 
     For 'log_softmax' detectors the difference of log-probabilities equals the
     difference of logits, so the same expression is correct for both spec

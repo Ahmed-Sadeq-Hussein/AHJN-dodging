@@ -1,3 +1,4 @@
+# Project made by AHJN . Ahmed Hussein and Julius Norén.  All rights reserved
 r"""
 rl.design_b -- Design B, Soft Actor Critic with a gradient hint.
 

@@ -1,3 +1,4 @@
+# Project made by AHJN . Ahmed Hussein and Julius Norén.  All rights reserved
 r"""
 compare_corpora.py -- two PGD target sets, side by side. Any env, no GPU.
 

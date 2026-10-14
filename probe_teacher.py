@@ -1,3 +1,4 @@
+# Project made by AHJN . Ahmed Hussein and Julius Norén.  All rights reserved
 r"""
 probe_teacher.py -- how high can the TEACHER go? RUN IN "voiceclone".
 

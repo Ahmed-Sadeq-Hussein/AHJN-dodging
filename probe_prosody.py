@@ -1,3 +1,4 @@
+# Project made by AHJN . Ahmed Hussein and Julius Norén.  All rights reserved
 r"""
 probe_prosody.py -- does dramatising the delivery change detector scores?
 RUN IN "voiceclone".

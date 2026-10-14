@@ -1,3 +1,4 @@
+# Project made by AHJN . Ahmed Hussein and Julius Norén.  All rights reserved
 r"""
 scorecard.py -- every metric for one clip, from one call. RUN IN "voiceclone".
 

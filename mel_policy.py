@@ -1,3 +1,4 @@
+# Project made by AHJN . Ahmed Hussein and Julius Norén.  All rights reserved
 r"""
 mel_policy.py -- Design A's actor: a bounded residual on CosyVoice2's mel,
 and the hook that gets it applied without touching the vendored repo.

@@ -1,3 +1,4 @@
+# Project made by AHJN . Ahmed Hussein and Julius Norén.  All rights reserved
 r"""
 analyze_run.py -- read a training run's log and answer one question:
 is there a real trend, or is this noise?

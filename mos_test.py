@@ -1,3 +1,4 @@
+# Project made by AHJN . Ahmed Hussein and Julius Norén.  All rights reserved
 r"""
 mos_test.py -- build the listening-test corpus. RUN IN "voiceclone".
 

@@ -1,3 +1,4 @@
+# Project made by AHJN . Ahmed Hussein and Julius Norén.  All rights reserved
 r"""
 collect_pgd.py -- build a supervised dataset of PGD solutions. RUN IN "voiceclone".
 

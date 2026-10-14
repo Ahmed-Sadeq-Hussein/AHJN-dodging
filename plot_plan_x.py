@@ -1,3 +1,4 @@
+# Project made by AHJN . Ahmed Hussein and Julius Norén.  All rights reserved
 r"""
 plot_plan_x.py -- figures for Plan_X/, comparing Design A and Design B.
 
@@ -113,7 +114,7 @@ def fig1b_softmin(a, b, out):
         ax.plot(np.arange(len(y)), y, "o", ms=3.5, alpha=.35, color=col)
         sm, lab = smooth(y)
         ax.plot(np.arange(len(sm)) + (len(y) - len(sm)) // 2, sm, color=col, lw=2,
-                label=f"{name} — {lab}")
+                label=f"{name}  -  {lab}")
     ax.axhline(0.0871, ls="--", color=C_REF, lw=1.3,
                label="unedited CosyVoice2 baseline (riven, 0.087)")
     ax.axhline(0.666, ls=":", color="0.35", lw=1.5,
@@ -141,7 +142,7 @@ def fig2_per_detector(b, out):
     ax.text(len(rows) * .99, .515, "decision boundary", ha="right", fontsize=8, color="0.4")
     ax.set_xlabel("iteration (9-iter mean)"); ax.set_ylabel("P(human)")
     ax.set_ylim(-.02, 1.02); ax.legend(fontsize=9); ax.grid(alpha=.3)
-    ax.set_title("Per-detector trajectory — Design B\n"
+    ax.set_title("Per-detector trajectory  -  Design B\n"
                  "Design A's failure was invisible here: it degraded AASIST/AASIST-L "
                  "while the soft-min reward looked flat", fontsize=11)
     fig.tight_layout(); fig.savefig(out, dpi=150); plt.close(fig)

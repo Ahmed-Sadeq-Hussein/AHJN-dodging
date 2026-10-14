@@ -1,3 +1,4 @@
+# Project made by AHJN . Ahmed Hussein and Julius Norén.  All rights reserved
 r"""
 probe_transfer.py -- does the edit fool detectors it never saw? RUN IN "voiceclone".
 

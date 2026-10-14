@@ -1,3 +1,4 @@
+# Project made by AHJN . Ahmed Hussein and Julius Norén.  All rights reserved
 r"""
 quality.py -- perceptual quality metrics, the thing this project has been
 missing. RUN IN THE "voiceclone" ENV.

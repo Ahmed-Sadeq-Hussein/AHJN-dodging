@@ -1,3 +1,4 @@
+# Project made by AHJN . Ahmed Hussein and Julius Norén.  All rights reserved
 r"""
 detectors.py -- one entry point for scoring an audio file with the four
 ASVspoof countermeasure models stored wherever VOICE_DETECTION_ROOT in .env points.

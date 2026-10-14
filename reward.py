@@ -1,3 +1,4 @@
+# Project made by AHJN . Ahmed Hussein and Julius Norén.  All rights reserved
 r"""
 reward.py -- the constrained reward for Design A (PPO-Lagrangian), and the
 one place detector scores cross from the "voiceclone" env into this process.

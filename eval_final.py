@@ -1,3 +1,4 @@
+# Project made by AHJN . Ahmed Hussein and Julius Norén.  All rights reserved
 r"""
 eval_final.py -- the decisive comparison. RUN IN "voiceclone", alone on the GPU.
 

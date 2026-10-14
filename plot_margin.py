@@ -1,3 +1,4 @@
+# Project made by AHJN . Ahmed Hussein and Julius Norén.  All rights reserved
 r"""
 plot_margin.py -- figures for the margin-objective work, into graphs/.
 

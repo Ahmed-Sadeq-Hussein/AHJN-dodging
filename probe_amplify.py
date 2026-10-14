@@ -1,3 +1,4 @@
+# Project made by AHJN . Ahmed Hussein and Julius Norén.  All rights reserved
 r"""
 probe_amplify.py -- is the distilled edit simply too small? RUN IN "voiceclone".
 

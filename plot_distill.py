@@ -1,3 +1,4 @@
+# Project made by AHJN . Ahmed Hussein and Julius Norén.  All rights reserved
 r"""
 plot_distill.py -- figures for the distillation run, into graphs/.
 

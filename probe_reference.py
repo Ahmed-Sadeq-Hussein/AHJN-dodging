@@ -1,3 +1,4 @@
+# Project made by AHJN . Ahmed Hussein and Julius Norén.  All rights reserved
 r"""
 probe_reference.py -- is the detectable artefact coming from the REFERENCE?
 RUN IN "voiceclone".

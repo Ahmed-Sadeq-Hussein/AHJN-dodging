@@ -1,3 +1,4 @@
+# Project made by AHJN . Ahmed Hussein and Julius Norén.  All rights reserved
 r"""
 train_ppo_mel.py -- Design A's training loop. RUN IN THE "voiceclone" ENV.
 

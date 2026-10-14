@@ -1,3 +1,4 @@
+# Project made by AHJN . Ahmed Hussein and Julius Norén.  All rights reserved
 r"""
 probe_objective.py -- which objective maximises SOFT-MIN? RUN IN "voiceclone".
 

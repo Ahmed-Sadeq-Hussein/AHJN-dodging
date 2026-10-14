@@ -1,3 +1,4 @@
+# Project made by AHJN . Ahmed Hussein and Julius Norén.  All rights reserved
 r"""
 apply_best.py -- speak text in an enrolled voice using the best configuration
 found in Plan_X. RUN IN THE "voiceclone" ENV.

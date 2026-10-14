@@ -1,3 +1,4 @@
+# Project made by AHJN . Ahmed Hussein and Julius Norén.  All rights reserved
 r"""
 verify_claims.py -- re-derive the headline numbers from stored results.
 

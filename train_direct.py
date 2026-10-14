@@ -1,3 +1,4 @@
+# Project made by AHJN . Ahmed Hussein and Julius Norén.  All rights reserved
 r"""
 train_direct.py -- train the edit network on the OBJECTIVE, not on PGD's answer.
 RUN IN "voiceclone", alone on the GPU.

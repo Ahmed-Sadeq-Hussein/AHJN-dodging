@@ -1,3 +1,4 @@
+# Project made by AHJN . Ahmed Hussein and Julius Norén.  All rights reserved
 r"""
 eval_all15.py -- the scorecard: every voice, every target. RUN IN "voiceclone".
 

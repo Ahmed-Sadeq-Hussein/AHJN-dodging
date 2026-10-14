@@ -1,3 +1,4 @@
+# Project made by AHJN . Ahmed Hussein and Julius Norén.  All rights reserved
 r"""
 Tester.py -- generation-quality metrics for the cloning side of the testbed.
 RUN IN THE "voiceclone" ENV (it needs onnxruntime, whisper and matplotlib).

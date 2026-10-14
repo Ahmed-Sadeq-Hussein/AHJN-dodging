@@ -1,3 +1,4 @@
+# Project made by AHJN . Ahmed Hussein and Julius Norén.  All rights reserved
 r"""
 probe_gap.py -- how close is the student to its teacher, voice by voice?
 RUN IN "voiceclone".

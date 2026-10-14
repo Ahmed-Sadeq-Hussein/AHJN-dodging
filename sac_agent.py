@@ -1,3 +1,4 @@
+# Project made by AHJN . Ahmed Hussein and Julius Norén.  All rights reserved
 r"""
 sac_agent.py -- Design B's networks: a gradient-informed actor and twin critics.
 

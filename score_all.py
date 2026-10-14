@@ -1,3 +1,4 @@
+# Project made by AHJN . Ahmed Hussein and Julius Norén.  All rights reserved
 r"""
 score_all.py -- phase 2 of the benchmark. RUN IN THE "voicefake" ENV.
 

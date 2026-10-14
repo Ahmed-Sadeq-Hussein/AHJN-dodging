@@ -1,3 +1,4 @@
+# Project made by AHJN . Ahmed Hussein and Julius Norén.  All rights reserved
 r"""
 cloners.py -- the generation half of the testbed, mirroring detectors.py.
 

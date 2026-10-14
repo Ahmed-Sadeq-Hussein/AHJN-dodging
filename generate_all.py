@@ -1,3 +1,4 @@
+# Project made by AHJN . Ahmed Hussein and Julius Norén.  All rights reserved
 r"""
 generate_all.py -- phase 1 of the benchmark. RUN IN THE "voiceclone" ENV.
 

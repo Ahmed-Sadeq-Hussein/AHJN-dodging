@@ -1,3 +1,4 @@
+# Project made by AHJN . Ahmed Hussein and Julius Norén.  All rights reserved
 r"""
 demo_best.py -- render arbitrary text with the best configuration, and keep
 the wavs. RUN IN "voiceclone".

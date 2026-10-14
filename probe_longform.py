@@ -1,3 +1,4 @@
+# Project made by AHJN . Ahmed Hussein and Julius Norén.  All rights reserved
 r"""
 probe_longform.py -- does any of this survive at 50 seconds? RUN IN "voiceclone".
 

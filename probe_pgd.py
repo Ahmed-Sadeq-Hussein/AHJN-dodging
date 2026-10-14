@@ -1,3 +1,4 @@
+# Project made by AHJN . Ahmed Hussein and Julius Norén.  All rights reserved
 r"""
 probe_pgd.py -- is a bounded mel edit even CAPABLE of fooling the detectors?
 RUN IN THE "voiceclone" ENV (which, it turns out, can host the detectors too).

@@ -1,3 +1,4 @@
+# Project made by AHJN . Ahmed Hussein and Julius Norén.  All rights reserved
 r"""
 probe_teacher_quality.py -- what does a stronger PGD teacher cost? RUN IN "voiceclone".
 

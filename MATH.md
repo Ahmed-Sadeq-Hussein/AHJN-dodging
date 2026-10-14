@@ -1,15 +1,15 @@
-# Design A — the math
+# Design A  -  the math
 
 Every formula used by `mel_policy.py`, `reward.py` and `train_ppo_mel.py`, stated in
 general form first and then applied to this repo's measured numbers.
 
-> **Scope.** This documents Design A, which **failed** — it made detection
-> significantly easier than doing nothing (slope −0.000727, t = −7.26). It is
+> **Scope.** This documents Design A, which **failed**  -  it made detection
+> significantly easier than doing nothing (slope -0.000727, t = -7.26). It is
 > kept because the derivations are correct and the failure is instructive: the
 > soft-min aggregator handed 99.9% of its gradient to two of the four detectors
 > and left the other two undefended, so the policy degraded them. The method
-> that worked is distillation from a PGD teacher — see
-> [`Plan_X/RESULTS.md`](Plan_X/RESULTS.md) section 7 — and it optimises the
+> that worked is distillation from a PGD teacher  -  see
+> [`Plan_X/RESULTS.md`](Plan_X/RESULTS.md) section 7  -  and it optimises the
 > logit margin of section 7m, not the probability-space reward derived here.
 
 > **Viewing this file:** VS Code's built-in Markdown preview renders the math
@@ -24,7 +24,7 @@ general form first and then applied to this repo's measured numbers.
 |---|---|---|
 | $M$ | mel spectrogram from CosyVoice2's flow decoder, $\mathbb{R}^{80\times T}$ | the state $s$ |
 | $T$ | frames in an utterance | $T = 50\cdot(\text{seconds})$, measured |
-| $N$ | action dimensionality, $N = 80T$ | ~22,000 for a 5–6 s clip |
+| $N$ | action dimensionality, $N = 80T$ | ~22,000 for a 5-6 s clip |
 | $\Delta$ | the additive edit applied to $M$ | the action $a$ |
 | $u$ | pre-squash Gaussian sample | internal to the policy |
 | $\mu_\theta(M)$ | policy mean, conv net output | `MelResidualPolicy.forward` |
@@ -73,7 +73,7 @@ collapses, with a single step and no successor, to
 $$\hat A = r - V_\omega(M)$$
 
 That is the only advantage this design needs. (The *iterative-refinement* variant of
-Design A — edit, re-score, edit again — would need the full form.)
+Design A  -  edit, re-score, edit again  -  would need the full form.)
 
 ---
 
@@ -101,8 +101,8 @@ $$\log\pi(\Delta_i) = \underbrace{-\tfrac{1}{2}\!\left[\frac{(u_i-\mu_i)^2}{\sig
 
 **As implemented.** `mel_policy.py` computes the first two terms and **drops
 $\log\varepsilon_{\max}$**. Since $\varepsilon_{\max}$ is fixed for a run, that term is a
-constant: it cancels exactly in the PPO ratio (§3.1) and has zero gradient. Harmless for
-optimisation — but it means `log_prob` is *not* a calibrated density, so don't read it as one.
+constant: it cancels exactly in the PPO ratio (section 3.1) and has zero gradient. Harmless for
+optimisation  -  but it means `log_prob` is *not* a calibrated density, so don't read it as one.
 
 ### 2.3 The $1/N$ normalisation, and why it is load-bearing
 
@@ -117,10 +117,10 @@ $$\rho = \exp\!\big(\log\bar\pi_{\text{new}} - \log\bar\pi_{\text{old}}\big) = \
 
 the **geometric mean** per-element likelihood ratio. Applied: $N\approx 22{,}000$, so an
 unnormalised joint ratio would be $e^{\pm\text{(thousands)}}$ and clip on every single
-step. The normalisation is what makes PPO tractable on this action space — at the cost
-that $\varepsilon_{\text{clip}}$ no longer carries its textbook meaning (§4.3).
+step. The normalisation is what makes PPO tractable on this action space  -  at the cost
+that $\varepsilon_{\text{clip}}$ no longer carries its textbook meaning (section 4.3).
 
-### 2.4 Expected edit magnitude — a closed form worth having
+### 2.4 Expected edit magnitude  -  a closed form worth having
 
 **General.** For $X\sim\mathcal{N}(0,\sigma^2)$, the mean absolute value is
 
@@ -134,7 +134,7 @@ $$\mathbb{E}\lvert\Delta\rvert \;\approx\; \varepsilon_{\max}\,\sigma\sqrt{\tfra
 
 $$\mathbb{E}\lvert\Delta\rvert \approx 0.6 \times 0.1353 \times 0.7979 = \mathbf{0.0648}$$
 
-Measured in the running system: $0.0638$. Agreement to ~1.5% — this is the check that
+Measured in the running system: $0.0638$. Agreement to ~1.5%  -  this is the check that
 confirms the parameterisation behaves as derived.
 
 ---
@@ -145,9 +145,9 @@ confirms the parameterisation behaves as derived.
 
 $$\rho(\theta) = \frac{\pi_\theta(a\mid s)}{\pi_{\theta_{\text{old}}}(a\mid s)}$$
 
-evaluated here in the normalised form of §2.3. **Sanity property:** before any gradient
+evaluated here in the normalised form of section 2.3. **Sanity property:** before any gradient
 step, $\theta = \theta_{\text{old}}$, so $\rho \equiv 1$ exactly. This is the single most
-useful correctness test of the whole implementation — it fails loudly if `sample()` and
+useful correctness test of the whole implementation  -  it fails loudly if `sample()` and
 `log_prob_of()` disagree.
 
 ### 3.2 Clipped surrogate
@@ -159,8 +159,8 @@ $$L^{\text{CLIP}}(\theta) = \mathbb{E}\Big[\min\big(\rho\hat A,\; \operatorname{
 $$\hat A = r - V_\omega(M), \qquad
 \hat A_{\text{norm}} = \frac{\hat A - \operatorname{mean}(\hat A)}{\operatorname{std}(\hat A) + 10^{-8}}$$
 
-**Computed once per rollout, before the epoch loop.** Recomputing it inside the loop —
-with the same critic that same update is training on the same batch — makes $V\to r$, so
+**Computed once per rollout, before the epoch loop.** Recomputing it inside the loop  - 
+with the same critic that same update is training on the same batch  -  makes $V\to r$, so
 $\hat A\to 0$ and each successive epoch contributes less gradient than the last. Measured
 decay when done wrongly: $0.82 \to 0.11$ over six epochs.
 
@@ -168,7 +168,7 @@ decay when done wrongly: $0.82 \to 0.11$ over six epochs.
 
 $$L^{V}(\omega) = \mathbb{E}\big[(V_\omega(M) - r)^2\big]$$
 
-The target is $r$, not a bootstrapped return, for the reason in §1.
+The target is $r$, not a bootstrapped return, for the reason in section 1.
 
 ### 3.5 Entropy (a proxy)
 
@@ -177,14 +177,14 @@ The target is $r$, not a bootstrapped return, for the reason in §1.
 $$H = \log\sigma + \tfrac{1}{2}\log(2\pi e) = \log\sigma + 1.4189$$
 
 The $\tanh$-squashed distribution has no closed-form entropy; this pre-squash quantity is
-the standard proxy, and it only shapes exploration pressure — it is not part of the
+the standard proxy, and it only shapes exploration pressure  -  it is not part of the
 objective's correctness.
 
 **Applied** at $\sigma = e^{-2}$: $H = -2 + 1.4189 = \mathbf{-0.581}$ per dimension.
 
 > **Scale note.** Summing over 80 channels gives $-46.5$, four orders of magnitude above a
-> typical policy loss of $\sim 0.003$ — no sane $c_H$ could balance them. The code uses the
-> per-dimension mean so that $c_H$ is a usable knob; sensible range $0.0005$–$0.005$.
+> typical policy loss of $\sim 0.003$  -  no sane $c_H$ could balance them. The code uses the
+> per-dimension mean so that $c_H$ is a usable knob; sensible range $0.0005$-$0.005$.
 
 ### 3.6 Total loss
 
@@ -212,7 +212,7 @@ $$J = \mathbb{E}\big[\operatorname{softmin}_k(d)\big]
 \;-\;\lambda_w\,\mathbb{E}\big[\max(0,\ \text{wer}-w_{\max})^2\big]$$
 
 which makes this a **quadratic-penalty method with a dual-adapted weight** (augmented-Lagrangian
-flavour), *not* textbook PPO-Lagrangian. Same spirit, different math — worth naming precisely.
+flavour), *not* textbook PPO-Lagrangian. Same spirit, different math  -  worth naming precisely.
 
 The hinge $\max(0,\cdot)$ means a satisfied constraint costs **exactly zero**, whatever
 $\lambda$ currently is. The square means the cost grows super-linearly with the violation,
@@ -229,15 +229,15 @@ hinge-clamped violation:
 
 $$c_s = s_{\min} - \text{sim}, \qquad c_w = \text{wer} - w_{\max}$$
 
-With the hinge-clamped value ($c\ge 0$ always), $\lambda$ is monotonically non-decreasing —
+With the hinge-clamped value ($c\ge 0$ always), $\lambda$ is monotonically non-decreasing  - 
 it can tighten but never ease, even long after the policy has moved well clear of the
 threshold. The signed form lets it relax. The reward's penalty term still uses the clamped
 version, so a satisfied episode is never charged.
 
-### 4.4 Fixed point — and an asymmetry to watch
+### 4.4 Fixed point  -  and an asymmetry to watch
 
 Setting the update to zero: $\lambda$ is stationary when $\mathbb{E}[c] = 0$, i.e. when
-similarity sits **exactly at** $s_{\min}$ — not comfortably above it. So whenever the
+similarity sits **exactly at** $s_{\min}$  -  not comfortably above it. So whenever the
 constraint is comfortably satisfied, $\lambda$ decays toward $0$ and the penalty
 switches off entirely until a violation reappears.
 
@@ -252,7 +252,7 @@ $0.05\times0.05 = 0.0025$/iter:
 
 $$\text{iterations for } \lambda:0\to 1.0 \;=\; \frac{1.0}{0.0025} = \mathbf{400}$$
 
-**The dual disarms ~3× faster than it re-engages.** Mitigations: raise $\eta_\lambda$,
+**The dual disarms ~3x faster than it re-engages.** Mitigations: raise $\eta_\lambda$,
 floor $\lambda$ above zero, or make the up-rate several times the down-rate.
 
 > **Measured, and a caveat on raising $\eta_\lambda$.** In the `designA_budget4h` run
@@ -260,16 +260,16 @@ floor $\lambda$ above zero, or make the up-rate several times the down-rate.
 >
 > $$\Delta\lambda = 0.2\times(-0.13) = -0.026\ \text{per iteration}$$
 >
-> and $\lambda_s$ fell $0.973 \to 0.337$ over 23 iterations — a drop of $0.636$
+> and $\lambda_s$ fell $0.973 \to 0.337$ over 23 iterations  -  a drop of $0.636$
 > against $23\times0.026 = 0.598$ predicted. The formula holds.
 >
 > But note what raising $\eta_\lambda$ actually bought: it speeds the dual in **both**
 > directions, and while the constraints are comfortably satisfied that means it
 > **disarms four times faster**. $\lambda_s$ reaches zero around iteration ~36 of 130,
 > leaving the similarity penalty switched off for the remaining ~70% of the run, with
-> only the §4.5 hard floor still guarding. Faster re-engagement only helps *after* a
+> only the section 4.5 hard floor still guarding. Faster re-engagement only helps *after* a
 > violation appears. If the goal is standing protection rather than reactive
-> protection, a floor $\lambda_{\min}\approx0.5$ is the better lever — or an
+> protection, a floor $\lambda_{\min}\approx0.5$ is the better lever  -  or an
 > asymmetric rate (fast up, slow down), which raising $\eta_\lambda$ alone does not
 > give you.
 
@@ -281,7 +281,7 @@ $$r \leftarrow \min(r,\ r_{\text{floor}}) \quad\text{if}\quad
 **Why absolute margins $m_s, m_w$ and not a multiple of the threshold.** The earlier form
 tested $\text{violation} > 2 s_{\min} = 1.40$. But
 $\max(0,\,0.70-\text{sim}) \le 0.70$ for any non-negative cosine, so **that test could
-never fire** — dead code. WER is unbounded above, so its version did work. Current values:
+never fire**  -  dead code. WER is unbounded above, so its version did work. Current values:
 $m_s = 0.25$ (fires below $\text{sim}=0.45$, under every cross-speaker pair measured here)
 and $m_w = 0.20$ (fires above $30\%$ WER).
 
@@ -300,7 +300,7 @@ $$\min_i x_i \;\le\; \operatorname{softmin}_k(x) \;\le\; \frac{1}{n}\sum_i x_i$$
 Lower bound by replacing every $x_i$ with $\min x$; upper bound by Jensen. Limits:
 $k\to\infty$ recovers $\min$, and $k\to 0$ recovers the mean.
 
-### 5.3 Gradient weights — where the learning signal actually goes
+### 5.3 Gradient weights  -  where the learning signal actually goes
 
 $$\frac{\partial}{\partial x_i}\operatorname{softmin}_k(x) = \frac{e^{-k x_i}}{\sum_j e^{-k x_j}} = \operatorname{softmax}(-k x)_i$$
 
@@ -318,11 +318,11 @@ $$n_{\text{eff}} = \frac{1}{\sum_i w_i^2}$$
 | 20 | 0.00% | 0.00% | 50.49% | 49.51% | 2.00 |
 
 **Reading.** At $k=8$ the reward is driven almost entirely by the two detectors that
-currently *catch* the clone. That is the intended behaviour — but AASIST contributes no
+currently *catch* the clone. That is the intended behaviour  -  but AASIST contributes no
 gradient at all until the other two rise. Use $k=4$ to keep it marginally in play.
 
 Value check at $k=8$: $\operatorname{softmin} = 0.08712$ against a logged reward of
-$0.08712$. ✓
+$0.08712$. yes
 
 ---
 
@@ -350,7 +350,7 @@ still inside the signal's own variation.
 
 ### 6.2 Exploration scale $\sigma$
 
-From §2.4, $\mathbb{E}\lvert\Delta\rvert = \varepsilon_{\max}\sigma\sqrt{2/\pi}$, expressed
+From section 2.4, $\mathbb{E}\lvert\Delta\rvert = \varepsilon_{\max}\sigma\sqrt{2/\pi}$, expressed
 as a fraction of $\bar\delta_t = 0.6367$:
 
 | $\psi = \log\sigma$ | $\sigma$ | $\mathbb{E}\lvert\Delta\rvert$ | % of a frame step |
@@ -388,8 +388,8 @@ $$lr_{\text{new}} = 3\times10^{-4}\sqrt{\frac{0.015}{0.0032}} = 3\times10^{-4}\t
 
 ### 6.5 Constraint thresholds
 
-$s_{\min}=0.70$ sits between two measured populations — cross-speaker similarity
-$0.16$–$0.56$, clone-vs-own-reference $0.836$. Well placed.
+$s_{\min}=0.70$ sits between two measured populations  -  cross-speaker similarity
+$0.16$-$0.56$, clone-vs-own-reference $0.836$. Well placed.
 
 $w_{\max}=0.10$ is **arguably mis-set**: the riven *reference itself* scores $13.3\%$ WER
 while the clone scores $5.3\%$. The bar currently holds the clone to a stricter standard
@@ -422,8 +422,8 @@ $$t_{\text{iter}}(B) \approx 13B + 17\ \text{seconds}$$
 | 8 | 121 s | 58 | 464 |
 | 16 | 225 s | 31 | 496 |
 
-Same sample budget either way — it is the same compute. **Prefer $B=8$:** equal detection
-power (§7.2) but 58 policy updates instead of 31.
+Same sample budget either way  -  it is the same compute. **Prefer $B=8$:** equal detection
+power (section 7.2) but 58 policy updates instead of 31.
 
 ### 7.2 What a 2-hour run can resolve
 
@@ -437,7 +437,7 @@ and the smallest total change resolvable at $2\sigma$ over the run is
 $$\Delta_{\text{resolvable}} = 2\,\operatorname{SE}(\text{slope})\times n$$
 
 **Applied** with the **measured** $\sigma_{ep} = 0.1304$ (184 episodes of the
-`designA_budget4h` run — see the correction note below), $B=8$, $n=130$:
+`designA_budget4h` run  -  see the correction note below), $B=8$, $n=130$:
 
 $$\operatorname{SE}_{\text{batch}} = \frac{0.1304}{\sqrt8} = 0.0461,\qquad
 \sqrt{\frac{130(130^2-1)}{12}} = 427.9$$
@@ -446,21 +446,21 @@ $$\operatorname{SE}(\text{slope}) = \frac{0.0461}{427.9} = 1.077\times10^{-4}$$
 
 $$\Delta_{\text{resolvable}} = 2\times1.077\times10^{-4}\times130 = \mathbf{0.028}$$
 
-Against a baseline softmin of $0.087$, that is a **~32% relative improvement** — the
+Against a baseline softmin of $0.087$, that is a **~32% relative improvement**  -  the
 smallest effect this budget can distinguish from noise.
 
 > **Correction.** Earlier revisions of this file used $\sigma_{ep}\approx0.09$, an
 > estimate taken from between-iteration spread before anything had been measured
-> directly. The real value is $0.1304$ — **45% higher** — which inflates every
+> directly. The real value is $0.1304$  -  **45% higher**  -  which inflates every
 > standard error by the same factor. A 130-iteration run therefore resolves
 > $\pm0.028$, not the $\pm0.014$ that the optimistic figure implied. The lesson is
-> the one in §8: measure $\sigma_{ep}$, do not estimate it. Two-hour and six-hour
+> the one in section 8: measure $\sigma_{ep}$, do not estimate it. Two-hour and six-hour
 > budgets should be re-derived from $0.1304$ before being quoted.
 
 ### 7.3 The honest caveat
 
 464 episodes is roughly **three orders of magnitude** below what continuous-control PPO
-normally consumes ($10^5$–$10^6$ steps). A converged policy is not on the table. What two
+normally consumes ($10^5$-$10^6$ steps). A converged policy is not on the table. What two
 hours *can* answer is narrower and still worth knowing:
 
 > Is there a detectable upward trend of at least $0.029$, with the constraints intact?
@@ -474,15 +474,15 @@ Reward rising while a constraint breaks is reward hacking, not progress.
 
 ---
 
-## 8. Measure $\sigma_{ep}$ before trusting §7
+## 8. Measure $\sigma_{ep}$ before trusting section 7
 
-Every number in §7.2 rests on $\sigma_{ep}$, the per-episode reward standard deviation,
+Every number in section 7.2 rests on $\sigma_{ep}$, the per-episode reward standard deviation,
 which is currently a rough estimate from between-iteration spread. It is cheap to measure
 directly: run with `--epochs 0` so the policy never updates, and take the spread of
 
 $$\sigma_{ep} = \operatorname{std}\big(\{r_1,\dots,r_{Bn}\}\big)$$
 
-Note this floor is not only sampling noise in the reward — CosyVoice2's LLM token
+Note this floor is not only sampling noise in the reward  -  CosyVoice2's LLM token
 sampling **and** HiFT's source-filter noise both vary run to run, so a frozen policy still
 produces varying audio. That is genuine environment stochasticity, which policy-gradient
 methods handle, but it sets the noise floor everything else is measured against.

@@ -1,3 +1,4 @@
+# Project made by AHJN . Ahmed Hussein and Julius Norén.  All rights reserved
 r"""
 collect_graphs.py -- gather every figure into graphs/ and write its index.
 

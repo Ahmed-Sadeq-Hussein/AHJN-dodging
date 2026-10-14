@@ -1,3 +1,4 @@
+# Project made by AHJN . Ahmed Hussein and Julius Norén.  All rights reserved
 r"""
 longform.py -- can the attack win on 70-second audio? RUN IN "voiceclone".
 

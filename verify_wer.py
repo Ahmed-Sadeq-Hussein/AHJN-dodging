@@ -1,3 +1,4 @@
+# Project made by AHJN . Ahmed Hussein and Julius Norén.  All rights reserved
 r"""
 verify_wer.py -- check the jiwer-backed Tester.wer against the hand-written
 Levenshtein pass it replaced.

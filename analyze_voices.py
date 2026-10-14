@@ -1,3 +1,4 @@
+# Project made by AHJN . Ahmed Hussein and Julius Norén.  All rights reserved
 r"""
 analyze_voices.py -- why does the edit work on some voices and not others?
 RUN IN "voiceclone".

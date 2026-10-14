@@ -1,3 +1,4 @@
+# Project made by AHJN . Ahmed Hussein and Julius Norén.  All rights reserved
 r"""
 mos_build_app.py -- assemble the listening-test page from the rendered corpus.
 
