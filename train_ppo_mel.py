@@ -319,7 +319,8 @@ def ppo_update(policy, critic, optimizer, episodes, *, clip_eps, epochs,
 
 # --------------------------------------------------------------------------
 
-def main() -> int:
+def build_parser() -> argparse.ArgumentParser:
+    """Every knob Design A takes, in one list."""
     ap = argparse.ArgumentParser(description="Design A: PPO-Lagrangian mel-edit policy")
     ap.add_argument("--voices", nargs="+", default=["riven"])
     ap.add_argument("--iterations", type=int, default=10)
@@ -349,7 +350,11 @@ def main() -> int:
                          "(needs --run-id), or an explicit path to a .pt file")
     ap.add_argument("--snapshot-every", type=int, default=5,
                     help="also keep a permanent iter_NNNN.pt every N iterations")
-    args = ap.parse_args()
+    return ap
+
+
+def main() -> int:
+    args = build_parser().parse_args()
 
     random.seed(args.seed)
     torch.manual_seed(args.seed)

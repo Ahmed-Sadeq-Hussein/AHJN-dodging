@@ -269,7 +269,8 @@ def load_buffer(path: Path, buf) -> int:
     return len(buf.data)
 
 
-def main() -> int:
+def build_parser() -> argparse.ArgumentParser:
+    """Every knob Design B takes, in one list."""
     ap = argparse.ArgumentParser(description="Design B: gradient-informed SAC mel policy")
     ap.add_argument("--voices", nargs="+", default=["riven", "swain", "samira", "jhin"])
     ap.add_argument("--iterations", type=int, default=400)
@@ -320,7 +321,11 @@ def main() -> int:
     ap.add_argument("--save-buffer", action="store_true", default=True,
                     help="persist the replay buffer so --resume keeps its experience")
     ap.add_argument("--resume", default=None)
-    args = ap.parse_args()
+    return ap
+
+
+def main() -> int:
+    args = build_parser().parse_args()
 
     random.seed(args.seed); torch.manual_seed(args.seed); np.random.seed(args.seed)
     rng = np.random.default_rng(args.seed)
