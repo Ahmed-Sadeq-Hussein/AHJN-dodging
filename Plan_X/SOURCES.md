@@ -43,7 +43,7 @@ through Crossref (2026-09-14); the three added for sections 7m and
 | source | role | where in repo |
 |---|---|---|
 | Radford et al. (2022). *Robust Speech Recognition via Large-Scale Weak Supervision* (Whisper). [arXiv:2212.04356](https://arxiv.org/abs/2212.04356) · [code](https://github.com/openai/whisper) | **used** — transcripts for WER | `Tester.py` |
-| Word error rate | used — Levenshtein distance written directly in `Tester.wer` rather than via a library ([jiwer](https://github.com/jitsi/jiwer) is the usual equivalent) | `Tester.py` |
+| Word error rate | used — [jiwer](https://github.com/jitsi/jiwer) 4.0.0 does the alignment in `Tester.wer`; tokenisation stays local so the definition of a word does not move with the library. It replaced a hand-written Levenshtein pass, and `verify_wer.py` shows the two agree on the rate over 20000 cases | `Tester.py` |
 | Wang et al. (2023). *CAM++: A Fast and Efficient Network for Speaker Verification Using Context-Aware Masking.* [arXiv:2303.00332](https://arxiv.org/abs/2303.00332) · [3D-Speaker](https://github.com/modelscope/3D-Speaker) | **used** — speaker embeddings for similarity (`campplus.onnx`, the model shipped with CosyVoice 2) | `Tester.py` |
 | Kumar et al. (2023). *TorchAudio-Squim: Reference-less Speech Quality and Intelligibility measures in TorchAudio.* [arXiv:2304.01448](https://arxiv.org/abs/2304.01448) · [tutorial](https://pytorch.org/audio/stable/tutorials/squim_tutorial.html) | **used** — PESQ / STOI / SI-SDR / MOS estimates without a clean reference | `quality.py` |
 | ITU-T Recommendation P.862, *PESQ.* [itu.int/rec/T-REC-P.862](https://www.itu.int/rec/T-REC-P.862) | basis — the metric SQUIM estimates | `quality.py` |

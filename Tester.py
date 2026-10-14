@@ -198,40 +198,30 @@ def normalise_text(text: str) -> list[str]:
 
 
 def wer(reference: str, hypothesis: str) -> tuple[float, int, int, int, int]:
-    """Word error rate by Levenshtein alignment.
+    """Word error rate, as (wer, substitutions, deletions, insertions, n_ref).
 
-    Returns (wer, substitutions, deletions, insertions, n_reference_words).
-    Implemented directly rather than pulling in jiwer -- it is a short DP and
-    one less dependency to pin.
+    jiwer does the alignment. The tokens are still produced by
+    `normalise_text` here rather than by jiwer's own transforms, so the
+    definition of a word does not change with the library version: lowercase,
+    `_WORD_RE`, and nothing else. jiwer is then handed pre-split tokens, which
+    it accepts as a list of words.
+
+    jiwer's rate is (S + D + I) / (S + D + H), and S + D + H is the reference
+    length, so this is the same quantity the hand-written Levenshtein pass
+    returned. `verify_wer.py` checks the two agree over 20000 cases.
     """
+    import jiwer
+
     ref, hyp = normalise_text(reference), normalise_text(hypothesis)
     n, m = len(ref), len(hyp)
     if n == 0:
+        # jiwer refuses an empty reference, and there is no rate to define
+        # against one; an all-insertion result keeps the old behaviour.
         return (float(m > 0), 0, 0, m, 0)
 
-    # d[i][j] = edit distance between ref[:i] and hyp[:j]; back[i][j] = op
-    d = np.zeros((n + 1, m + 1), dtype=np.int32)
-    d[:, 0] = np.arange(n + 1)
-    d[0, :] = np.arange(m + 1)
-    for i in range(1, n + 1):
-        for j in range(1, m + 1):
-            if ref[i - 1] == hyp[j - 1]:
-                d[i, j] = d[i - 1, j - 1]
-            else:
-                d[i, j] = 1 + min(d[i - 1, j - 1], d[i - 1, j], d[i, j - 1])
-
-    # walk back to split the distance into S / D / I
-    i, j, S, D, I = n, m, 0, 0, 0
-    while i > 0 or j > 0:
-        if i > 0 and j > 0 and ref[i - 1] == hyp[j - 1] and d[i, j] == d[i - 1, j - 1]:
-            i, j = i - 1, j - 1
-        elif i > 0 and j > 0 and d[i, j] == d[i - 1, j - 1] + 1:
-            S += 1; i, j = i - 1, j - 1
-        elif i > 0 and d[i, j] == d[i - 1, j] + 1:
-            D += 1; i -= 1
-        else:
-            I += 1; j -= 1
-    return ((S + D + I) / n, S, D, I, n)
+    out = jiwer.process_words([" ".join(ref)], [" ".join(hyp)])
+    return (float(out.wer), int(out.substitutions), int(out.deletions),
+            int(out.insertions), n)
 
 
 _ASR = None

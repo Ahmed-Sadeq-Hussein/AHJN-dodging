@@ -87,6 +87,7 @@ diffusers==0.39.0
 einops==0.8.2
 hydra-core==1.3.6
 inflect==7.5.0
+jiwer==4.0.0             # Tester.wer alignment; pulls rapidfuzz
 librosa==0.11.0
 llvmlite==0.42.0         # 0.49.0 blocked by Smart App Control, see trap 5
 numba==0.59.1            # must match llvmlite
@@ -95,7 +96,8 @@ modelscope==1.39.1
 omegaconf==2.3.1
 onnxruntime==1.23.2
 openai-whisper==20250625
-pyarrow==25.0.1          # cosyvoice2.yaml resolves dataset.processor
+pyarrow==14.0.2          # cosyvoice2.yaml resolves dataset.processor;
+                         # 25.0.1 blocked by Smart App Control, as llvmlite
 pyworld==0.3.5           # same
 rootutils==1.0.7
 scipy==1.15.3
