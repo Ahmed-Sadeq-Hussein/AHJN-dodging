@@ -5,7 +5,7 @@ ASVspoof countermeasure models stored wherever VOICE_DETECTION_ROOT in .env poin
 
     from detectors import score_file, MODEL_ORDER
 
-    scores = score_file(r"C:\clip.wav", [True, True, False, True])
+    scores = score_file(r"C:\clip.wav", ["AASIST", "AASIST-L", "RawGAT-ST"])
     # -> array([0.98, 0.95,  nan, 0.87])
 
 Score convention (as requested):
@@ -31,7 +31,7 @@ import os
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Iterable, Mapping
+from typing import Any, Callable, Mapping
 
 import numpy as np
 
@@ -349,38 +349,25 @@ def _windows(x: np.ndarray, nb_samp: int = NB_SAMP, hop: int | None = None) -> n
 # selection
 # --------------------------------------------------------------------------
 
-def _flatten(seq: Iterable) -> list:
-    out: list = []
-    for item in seq:
-        if isinstance(item, (list, tuple, np.ndarray)):
-            out.extend(_flatten(item))
-        else:
-            out.append(item)
-    return out
+def _selected_models(models) -> list[str]:
+    """Which detectors to run, as names in MODEL_ORDER order.
 
-
-def _normalise_selection(models) -> list[bool]:
-    """Accept a bool matrix/list, a dict, a name list, or None (= all)."""
+    `None` means all four. Otherwise pass one name or an iterable of names.
+    Earlier versions also took a bool list, a nested bool matrix and a
+    {name: bool} mapping; no caller ever used them and five accepted shapes
+    made this harder to read than the thing it was selecting.
+    """
     if models is None:
-        return [True] * len(MODEL_ORDER)
-    if isinstance(models, Mapping):
-        unknown = set(models) - set(MODEL_ORDER)
-        if unknown:
-            raise KeyError(f"unknown model(s) {sorted(unknown)}; expected {list(MODEL_ORDER)}")
-        return [bool(models.get(n, False)) for n in MODEL_ORDER]
+        return list(MODEL_ORDER)
     if isinstance(models, str):
         models = [models]
-    flat = _flatten(models)
-    if flat and all(isinstance(m, str) for m in flat):
-        unknown = set(flat) - set(MODEL_ORDER)
-        if unknown:
-            raise KeyError(f"unknown model(s) {sorted(unknown)}; expected {list(MODEL_ORDER)}")
-        return [n in set(flat) for n in MODEL_ORDER]
-    if len(flat) != len(MODEL_ORDER):
-        raise ValueError(
-            f"expected {len(MODEL_ORDER)} flags for {list(MODEL_ORDER)}, got {len(flat)}"
-        )
-    return [bool(v) for v in flat]
+    wanted = list(models)
+    unknown = [m for m in wanted if m not in MODEL_ORDER]
+    if unknown:
+        raise KeyError(f"unknown model(s) {unknown}; expected {list(MODEL_ORDER)}")
+    if not wanted:
+        raise ValueError("no models selected")
+    return [n for n in MODEL_ORDER if n in set(wanted)]
 
 
 # --------------------------------------------------------------------------
@@ -402,12 +389,8 @@ def score_file(
     Parameters
     ----------
     audio_path : any format your soundfile/librosa install can read.
-    models     : which detectors to run. Accepts
-                   [True, False, True, True]        aligned to MODEL_ORDER
-                   [[True, False], [True, True]]    nested, gets flattened
-                   {"AASIST": True, "RawNet2": True}
-                   ["AASIST", "RawNet2"]
-                   None                             all four
+    models     : which detectors to run: a name, an iterable of names, or
+                 None for all four. Names come from MODEL_ORDER.
     hop        : window stride in samples. Defaults to NB_SAMP
                  (non-overlapping). Use NB_SAMP // 2 for denser coverage.
     max_windows: cap windows per file; None = use the whole file.
@@ -422,9 +405,7 @@ def score_file(
     Unselected models are nan.
     """
     import torch
-    flags = _normalise_selection(models)
-    if not any(flags):
-        raise ValueError("no models selected")
+    wanted = _selected_models(models)
     if aggregate not in ("mean", "min", "median"):
         raise ValueError(f"aggregate must be mean/min/median, got {aggregate!r}")
 
@@ -437,31 +418,39 @@ def score_file(
     wins = _windows(wav, NB_SAMP, hop)
     if max_windows is not None:
         wins = wins[:max_windows]
-    batch_all = torch.from_numpy(wins).float()
+    windows = torch.from_numpy(wins).float()
 
     out = np.full(len(MODEL_ORDER), np.nan, dtype=np.float64)
-    reducer = {"mean": np.mean, "min": np.min, "median": np.median}[aggregate]
+    reduce = {"mean": np.mean, "min": np.min, "median": np.median}[aggregate]
 
-    for idx, (name, want) in enumerate(zip(MODEL_ORDER, flags)):
-        if not want:
-            continue
-        spec = _SPECS[name]
-        net = get_model(name, device)
-
-        probs: list[np.ndarray] = []
-        with torch.no_grad():
-            for start in range(0, batch_all.shape[0], batch_size):
-                chunk = batch_all[start:start + batch_size].to(device)
-                raw = spec.unpack(net(chunk, **spec.forward_kwargs))
-                if spec.activation == "logits":
-                    p = torch.softmax(raw, dim=1)
-                else:                       # already log-probabilities
-                    p = torch.exp(raw)
-                probs.append(p[:, 1].detach().cpu().numpy())   # index 1 = bonafide
-
-        out[idx] = reducer(np.concatenate(probs))
+    for name in wanted:
+        p_human = _human_probabilities(name, windows, device, batch_size)
+        out[MODEL_ORDER.index(name)] = reduce(p_human)
 
     return np.clip(out, 0.0, 1.0)
+
+
+def _human_probabilities(name: str, windows, device, batch_size: int):
+    """P(human) for every window, for one detector.
+
+    The three repos disagree about what forward() hands back, which is the
+    only reason this is not two lines: AASIST returns (hidden, logits),
+    RawGAT-ST wants a Freq_aug flag, and RawNet2 has already taken the log
+    softmax. _SPECS pins each one.
+    """
+    import torch
+    spec = _SPECS[name]
+    net = get_model(name, device)
+
+    out = []
+    with torch.no_grad():
+        for start in range(0, windows.shape[0], batch_size):
+            chunk = windows[start:start + batch_size].to(device)
+            raw = spec.unpack(net(chunk, **spec.forward_kwargs))
+            prob = (torch.softmax(raw, dim=1) if spec.activation == "logits"
+                    else torch.exp(raw))
+            out.append(prob[:, 1].detach().cpu().numpy())  # index 1 = bonafide
+    return np.concatenate(out)
 
 
 def score_file_dict(audio_path, models=None, **kw) -> dict[str, float]:
