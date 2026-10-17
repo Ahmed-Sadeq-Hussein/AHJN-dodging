@@ -1,71 +1,219 @@
 # AHJN-dodging
 
-A codebase for trying to make code to make Cozyvoice 2 dodge detection of AI voice detection tools while maintaining MOS and WER scores.
+Project made by AHJN . Ahmed Hussein and Julius Norén.  All rights reserved
 
-Pipeline: clone a reference voice with CosyVoice2 -> score the result with four anti-spoofing detectors -> measure how much the clone actually sounds like its reference (similarity) and how intelligible it is (WER) -> use those numbers to judge whether a change made the clone dodge detection without wrecking quality.
+Can a CosyVoice2 voice clone be made to read as **human** to four anti-spoofing
+detectors, without losing the speaker, the words, or the audio quality?
+
+Framed as a reinforcement-learning problem: an agent observes the mel
+spectrogram inside the synthesiser, applies one bounded edit to it, and is
+rewarded for how human the four detectors judge the result, under constraints
+on speaker similarity and word error rate.
+
+**The headline result is negative, and it is the finding.** Two RL designs
+were built, trained to 400 iterations each, and measured end to end. Both are
+significantly *worse* than not editing at all, on the detectors and on human
+listening alike. A white-box attack on the same intervention point, which gets
+the gradient instead of a scalar, works well. The gap between those two
+outcomes is what this project is about.
+
+| arm | soft-min detector | MOS (human) | PESQ |
+|---|---|---|---|
+| unedited clone | **0.185** | **3.97** | **3.47** |
+| Design A, PPO-Lagrangian | 0.085 | 2.53 | 2.82 |
+| Design B, SAC + gradient hint | 0.135 | 3.20 | 3.29 |
+
+*30 paired items, 15 voices in two registers. 1 = human on the detectors.*
+
+---
+
+## Where to start reading
+
+| If you want | Read |
+|---|---|
+| How the pieces fit together | `Plan_X/ARCHITECTURE.md` and `graphs/21_architecture.svg` |
+| The RL designs, results and what went wrong | `rl/ANALYSIS.md` |
+| The formal problem: states, actions, reward, bandit framing, power analysis | `MATH.md` |
+| Every experiment in order, including the failures | `Plan_X/RESULTS.md` |
+| Papers, models and libraries used, with links | `Plan_X/SOURCES.md` |
+| What each figure shows | `graphs/INDEX.md` |
+
+---
 
 ## Setup
 
 ### 1. Configure paths (`.env`)
 
-Nothing in this repo hardcodes a path. Copy `.env.example` to `.env` in this folder and set these four:
+Nothing hardcodes a path. Copy `.env.example` to `.env` and set:
 
 | Variable | What goes there |
 |---|---|
-| `VOICE_DETECTION_ROOT` | Folder holding the anti-spoofing repos (`aasist`, `RawGAT-ST-antispoofing`, `asvspoof2021-baselines`) and their pretrained weights. |
-| `VOICE_CLONING_ROOT` | Folder holding the CosyVoice2 repo and its `models\CosyVoice2-0.5B` weights (`llm.pt`, `flow.pt`, `hift.pt`, `campplus.onnx`, ...). |
-| `VOICE_DATA_ROOT` | One subfolder per voice, each containing `reference.wav` and, ideally, `reference.txt` (its transcript  -  CosyVoice2 clones better with one, and `Tester.py` needs it to compute WER). |
-| `RESULTS_ROOT` | Output root. `generators\` and `discriminator\` are created under it automatically. |
+| `VOICE_DETECTION_ROOT` | The anti-spoofing repos (`aasist`, `RawGAT-ST-antispoofing`, `asvspoof2021-baselines`) and their pretrained weights. |
+| `VOICE_CLONING_ROOT` | The CosyVoice2 repo and its `models\CosyVoice2-0.5B` weights (`llm.pt`, `flow.pt`, `hift.pt`, `campplus.onnx`). |
+| `VOICE_DATA_ROOT` | One subfolder per voice, each with `reference.wav` and `reference.txt`. 15 voices were used here. |
+| `RESULTS_ROOT` | Output root. `generators\`, `discriminator\` and `rl_runs\` are created under it. |
+| `VOICEFAKE_PYTHON` | Path to the `voicefake` interpreter. `reward.py` needs it to reach the detectors during training. |
 
-Four more variables (`GENERATORS_DIR`, `DISCRIMINATOR_DIR`, `METRICS_DIR`, `CAMPPLUS_ONNX_PATH`) are derived automatically from the four above  -  only set one if you want that particular output somewhere else. See the comments in `.env.example` for their derived defaults.
+`GENERATORS_DIR`, `DISCRIMINATOR_DIR`, `METRICS_DIR`, `CAMPPLUS_ONNX_PATH` and
+`GRAPHS_DIR` are derived automatically; set one only to move that output. A
+real environment variable always overrides `.env`, and a missing required one
+fails at import rather than silently using someone else's path.
 
-A real environment variable of the same name always overrides `.env`. Missing a required one fails loudly at import time rather than silently falling back to some machine's path.
+### 2. Install the two environments
 
-### 2. Install dependencies
-
-Work is split across **two conda environments** because the two halves pin incompatible torch/numpy versions. They never share a process  -  they hand off through `.wav` files and a JSON manifest on disk.
+The two halves pin incompatible torch/numpy versions:
 
 | Env | Runs | torch | numpy | Install |
 |---|---|---|---|---|
-| `voicefake` | `detectors.py`, `score_all.py` | 2.6.0+cu124 | 2.2.6 | `conda create -n voicefake -y python=3.10` then `pip install -r requirements.txt` |
-| `voiceclone` | `cloners.py`, `generate_all.py`, `Tester.py` | 2.3.1+cu121 | 1.26.4 | `conda create -n voiceclone -y python=3.10` then `pip install -c constraints.txt -r requirements-voiceclone.txt` |
+| `voiceclone` | CosyVoice2, the trainers, the attack, every evaluation | 2.3.1+cu121 | 1.26.4 | `conda create -n voiceclone -y python=3.10` then `pip install -c constraints.txt -r requirements-voiceclone.txt` |
+| `voicefake` | the detectors in isolation | 2.6.0+cu124 | 2.2.6 | `conda create -n voicefake -y python=3.10` then `pip install -r requirements.txt` |
 
-Both `requirements*.txt` files document *why* each pin exists inline (the two anti-spoofing baselines pin mutually-incompatible numpy/librosa/pyyaml versions; some of CosyVoice2's transitive deps will silently swap out the pinned CUDA torch for a CPU wheel unless installed against `constraints.txt`)  -  read the comments there before changing anything, they're the record of what actually broke during setup.
+**Most work happens in `voiceclone`.** The detectors import and run correctly
+there too, which is how the stored scores were produced; the two environments
+agree to about 1e-7. The separate `voicefake` env exists because `reward.py`
+batches a whole RL rollout through one subprocess call, and because the
+detector repos pin versions CosyVoice2 cannot use.
 
-Two things pip can't install, needed once before things fully work:
+Both `requirements*.txt` files explain inline *why* each pin exists. They are
+the record of what actually broke during setup, including the Windows Smart
+App Control traps; read them before changing a version.
+
+One thing pip cannot do, needed once:
 
 ```
-# voiceclone env -- English g2p for MeloTTS/OpenVoiceV2
 python -c "import nltk; [nltk.download(p) for p in ['averaged_perceptron_tagger_eng','cmudict','punkt','punkt_tab']]"
 ```
 
-- **Whisper weights** (`Tester.py`'s WER) and **MeloTTS's base-speaker/BERT checkpoints** (OpenVoiceV2 generation) download from HuggingFace automatically the first time each is used  -  just needs network access once.
+Whisper's `base` weights download from HuggingFace on first use.
 
-## Files
+### 3. Check the install
+
+```
+python ahjn.py check
+```
+
+Reports the interpreter, CUDA, every configured path, whether all four
+detector checkpoints are findable, and whether the listening-test corpus is
+present. Run this before anything slow.
+
+---
+
+## Using it
+
+`ahjn.py` is the front door. Everything below is a verb on it.
+
+```
+python ahjn.py check                      # environment and model files
+python ahjn.py detect clip.wav            # the four detectors, 1 = human
+python ahjn.py score  clip.wav --reference ref.wav --text "what was said"
+python ahjn.py status                     # checkpoints and training trend
+python ahjn.py speak --design b --voice riven --text "hello" --out b.wav
+python ahjn.py speak           --voice riven --text "hello" --out plain.wav
+python ahjn.py figures                    # redraw every figure
+python ahjn.py verify                     # re-derive the published numbers
+```
+
+`score` is the one call that returns everything for a clip: the four
+detectors, their soft-min, speaker similarity, WER, and SQUIM PESQ / STOI /
+SI-SDR. It never raises; whatever it could not compute is absent and listed
+under `problems`.
+
+### Training
+
+```
+python ahjn.py train b --iters 400 --resume      # continue Design B
+python ahjn.py train a --iters 400 --resume      # continue Design A
+```
+
+`--resume` picks up the newest checkpoint in the run directory and carries the
+optimiser state, the Lagrange multipliers and (for Design B) the replay
+buffer. Without `--iters` each design uses the defaults in `rl/design_a.py`
+and `rl/design_b.py`. The underlying scripts, `train_ppo_mel.py` and
+`train_sac_mel.py`, can still be called directly for anything the wrapper does
+not expose; `--help` on either lists every knob.
+
+### The listening test
+
+```
+python ahjn.py rate build        # render the corpus: 15 voices x 2 lines x 3 arms
+python ahjn.py rate page         # build the rating page
+python ahjn.py rate serve        # serve it and open a browser
+python ahjn.py rate import ~/Downloads/mos_ratings.json
+python ahjn.py rate results --split
+```
+
+Use `rate serve` rather than opening the HTML from disk. A `file://` page has
+no storage and no download, so ratings go nowhere.
+
+All three arms of an item share one seed. Both policies are deterministic and
+consume no RNG, so the arms replay the same speech tokens and the same vocoder
+noise, and the mel edit is the only audible difference. Identical file lengths
+are the check that it held.
+
+---
+
+## Reproducing the results
+
+```
+python ahjn.py verify
+```
+
+`verify_claims.py` re-derives 41 headline numbers from the stored JSON and
+prints each beside its published value (currently 41/41). `verify_wer.py`
+checks the jiwer-based WER against the hand-written Levenshtein pass it
+replaced, over 20098 cases.
+
+```
+python ahjn.py figures
+```
+
+Runs every `plot_*.py` against the stored results, writing to `graphs/`:
+21 numbered figures across 27 files, since figure 20 also ships its panels
+separately. Nothing is regenerated from a model, so this is fast and
+deterministic.
+
+Full retraining is not fast: Design A and Design B are roughly 4 and 9 GPU
+hours to 400 iterations. The checkpoints and logs under
+`RESULTS_ROOT\rl_runs\` are what the analysis reads.
+
+---
+
+## The code
 
 | File | Env | What it does |
 |---|---|---|
-| `env_config.py` | either | Loads `.env` and exposes every path (`VOICE_DETECTION_ROOT`, `VOICE_CLONING_ROOT`, `VOICE_DATA_ROOT`, `RESULTS_ROOT`, and the four derived dirs) as one shared import. No dependencies. |
-| `detectors.py` | voicefake | Runs a `.wav` through the four anti-spoofing models (AASIST, AASIST-L, RawNet2, RawGAT-ST) and returns `P(human)` per model, 1.0 = human, 0.0 = AI. Handles model selection, windowing long clips, and caching loaded models. `--check` verifies the weights are where `.env` says they are. |
-| `cloners.py` | voiceclone | Zero-shot voice cloning: `enroll(audio, model)` registers a reference clip, `generate(text, audio)` speaks new text in that voice. CosyVoice2 only right now  -  `ENABLED_MODELS` gates OpenVoiceV2 off (its code is intact, untouched, ready to flip back on). |
-| `generate_all.py` | voiceclone | Phase 1: enrolls one reference voice on every enabled cloning model and writes each clone to `generators\<Model>\<voice>.wav`, plus a `manifest_<voice>.json` phase 2 reads. Merges into an existing manifest rather than overwriting it. |
-| `score_all.py` | voicefake | Phase 2: reads a voice's manifest, scores the human reference *and* every generated clip with all four detectors, and writes a CSV, a JSON, a clipxdetector heatmap, and a human-vs-AI grouped bar chart to `discriminator\`. |
-| `Tester.py` | voiceclone | Quality metrics, independent of the detectors: a speaker-similarity heatmap (CAM++ cosine embedding  -  the same one CosyVoice2 itself conditions on) across an array of voices, and a word-error-rate ranking (Whisper transcript vs. target text) as both a table and a best-first bar chart. Writes to `generators\metrics\`. |
-| `requirements.txt` |  -  | Pinned deps for the `voicefake` env, with inline notes on why each pin exists. |
-| `requirements-voiceclone.txt` |  -  | Pinned deps for the `voiceclone` env, same treatment. |
-| `constraints.txt` |  -  | Passed to pip alongside `requirements-voiceclone.txt` so a transitive dependency (`lightning`, `x-transformers`) can't silently replace the pinned CUDA torch with a CPU-only wheel. |
-| `.env` / `.env.example` |  -  | Your machine's real paths (gitignored) / the template to copy it from. |
+| `ahjn.py` | voiceclone | The command line. Every verb above. |
+| `env_config.py` | either | Loads `.env` and exposes every path as one import. |
+| `cloners.py` | voiceclone | Zero-shot cloning: `enroll`, `generate`. CosyVoice2 only. |
+| `detectors.py` | either | The four anti-spoofing models; `P(human)` per model. `--check` verifies the weights. |
+| `diffscore.py` | voiceclone | The differentiable path: reaches past `inference_mode`, turns cuDNN off for RawNet2's GRU, and backpropagates detector scores to the mel. |
+| `mel_policy.py` | voiceclone | `MelResidualPolicy`, `MelValueNet`, and `mel_edit_hook`, which patches `hift.inference` so the mel can be edited mid-synthesis. |
+| `reward.py` | voiceclone | Soft-min over the detectors, two Lagrange multipliers, a hard floor. Reaches the detectors through `VOICEFAKE_PYTHON`. |
+| `train_ppo_mel.py` | voiceclone | Design A: PPO with Lagrangian constraints. |
+| `train_sac_mel.py` | voiceclone | Design B: SAC, twin critics, detector gradient as extra input channels. |
+| `sac_agent.py` | voiceclone | The SAC actor, critics and temperature. |
+| `collect_pgd.py` | voiceclone | The white-box teacher: PGD on the mel, per clip. |
+| `distill.py` | voiceclone | Trains a one-pass student to imitate the teacher's edits. |
+| `rl/` | voiceclone | A stable interface over both designs: `train`, `summarise`, `latest_checkpoint`, `generate`, plus `mos_corpus.py` and `ANALYSIS.md`. |
+| `scorecard.py` | voiceclone | Every metric for a clip in one call. |
+| `Tester.py` | voiceclone | CAM++ speaker embedding, Whisper transcript, WER through jiwer. |
+| `quality.py` | voiceclone | TorchAudio-SQUIM: PESQ, STOI, SI-SDR, estimated MOS. No reference needed. |
+| `textbank.py` | either | The train / eval sentence split. Eval sentences are never trained on. |
+| `eval_*.py`, `probe_*.py` | voiceclone | One script per experiment, in the order `Plan_X/RESULTS.md` tells them. |
+| `plot_*.py` | either | One script per figure, all writing to `graphs/`. |
+| `verify_claims.py`, `verify_wer.py` | voiceclone | Re-derive the published numbers; check the WER change. |
+| `generate_all.py`, `score_all.py` | both | The original two-phase survey that preceded the RL work. |
+| `requirements*.txt`, `constraints.txt` | - | Pinned deps, with the reason for each pin inline. |
+| `.env` / `.env.example` | - | Your paths (gitignored) / the template. |
 
-## Typical run
+---
 
-```
-conda activate voiceclone
-python generate_all.py --voice riven
+## A note on the two environments
 
-conda activate voicefake
-python score_all.py --voice riven
-
-conda activate voiceclone
-python Tester.py --voice riven
-```
-#Push 2
+`detectors.py` runs under either interpreter and gives the same answer. The
+split matters in exactly one place: `reward.py` shells out to
+`VOICEFAKE_PYTHON` so a whole rollout is scored in one subprocess, because
+loading the four models costs about 13 seconds and would otherwise dominate
+every episode. The white-box path does the opposite and keeps everything in
+one process, because it needs CosyVoice2 and the detectors in the same
+autograd graph.

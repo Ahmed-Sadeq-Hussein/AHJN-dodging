@@ -321,7 +321,7 @@ def cmd_speak(args) -> int:
 def cmd_figures(args) -> int:
     scripts = ["plot_mos.py --split", "plot_plan_x.py", "plot_distill.py",
                "plot_qc_frontier.py", "plot_frontier.py", "plot_margin.py",
-               "plot_ab_voices.py", "plot_longform.py"]
+               "plot_ab_voices.py", "plot_longform.py", "plot_architecture.py"]
     rc = 0
     for s in scripts:
         parts = s.split()
