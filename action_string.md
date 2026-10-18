@@ -472,5 +472,17 @@ on the order of a minute, and each clip is a few seconds after that. Prefer
 `--from-json` and `ahjn.py figures` when you are only changing how results are
 presented.
 
+**Anything else using the GPU will dominate.** CosyVoice2 normally
+synthesises faster than real time. Measured on this machine with a game
+running in the background, one 3.4 second clip took seven minutes, a real
+time factor of 124. Check before starting a run:
+
+```bash
+nvidia-smi --query-gpu=memory.used,memory.total,utilization.gpu --format=csv
+```
+
+If utilisation is already high and most of the memory is gone, close whatever
+owns it first. The training estimates above assume the card is yours.
+
 **No ffmpeg needed.** Whisper would normally shell out to it; `Tester.py`
 decodes with librosa and hands Whisper an array instead.
