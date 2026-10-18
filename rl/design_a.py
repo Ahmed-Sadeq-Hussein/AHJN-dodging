@@ -43,9 +43,12 @@ __all__ = ["train", "generate", "history", "summarise", "load_policy",
            "checkpoints", "latest_checkpoint", "run_dir", "DEFAULTS"]
 
 # The settings the recorded run used. Anything passed to train() overrides one.
+# iterations was 130 when the run was first budgeted at four hours; the
+# recorded run was later continued to 400, which is what every published
+# Design A number is measured at, so 130 no longer reproduced it.
 DEFAULTS = {
     "voices": ["riven", "swain", "samira", "jhin"],
-    "iterations": 130,
+    "iterations": 400,
     "batch-size": 8,
     "epochs": 4,
     "lr": 6e-4,
