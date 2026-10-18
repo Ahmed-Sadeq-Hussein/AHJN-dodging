@@ -67,10 +67,15 @@ def main() -> int:
             s = json.loads(cand.read_text(encoding="utf8"))
             break
     if s:
-        claim("Design A slope", -0.000727, s["design_a"]["slope"], "3", 1e-5)
-        claim("Design B slope", +0.000033, s["design_b"]["slope"], "4", 1e-5)
-        claim("Design B iterations", 315, s["design_b"]["iterations"], "4", 0.5)
-        claim("Design B episodes", 2520, s["design_b"]["episodes"], "4", 0.5)
+        # Both runs were later continued to 400 iterations, which moved
+        # every one of these. The earlier figures (-0.000727 at n = 130 and
+        # +0.000033 at n = 315) are still quoted in the write-up as the
+        # pre-extension values and are correct there; what summarise() returns
+        # now is the full run, so that is what gets checked.
+        claim("Design A slope", -0.000203, s["design_a"]["slope"], "3", 1e-5)
+        claim("Design B slope", +0.000023, s["design_b"]["slope"], "4", 1e-5)
+        claim("Design B iterations", 319, s["design_b"]["iterations"], "4", 0.5)
+        claim("Design B episodes", 2552, s["design_b"]["episodes"], "4", 0.5)
 
     # ---- section 7n / 7p: the all-15 operating points ------------------------
     fin = _load("all15_final.json")

@@ -8,8 +8,8 @@ Everything here is reproducible from the recorded runs:
 
 ```python
 import rl
-rl.summarise("designA_budget4h")   # slope -0.000727, t = -7.26, n = 130
-rl.summarise("designB_B9h")        # slope +0.000033, t = +0.46, n = 315
+rl.summarise("designA_budget4h")   # slope -0.000203, t = -8.18, n = 400
+rl.summarise("designB_B9h")        # slope +0.000023, t = +0.32, n = 319
 ```
 
 ---
