@@ -29,18 +29,27 @@ outcomes is what this project is about.
 
 ## Where to start reading
 
+Every document in this repository, and what it is for. Nothing else is
+hiding anywhere.
+
 | If you want | Read |
 |---|---|
-| How the pieces fit together | `Plan_X/ARCHITECTURE.md` and `graphs/21_architecture.svg` |
-| The RL designs, results and what went wrong | `rl/ANALYSIS.md` |
-| The formal problem: states, actions, reward, bandit framing, power analysis | `MATH.md` |
-| Every experiment in order, including the failures | `Plan_X/RESULTS.md` |
-| Papers, models and libraries used, with links | `Plan_X/SOURCES.md` |
-| What each figure shows | `graphs/INDEX.md` |
+| **To install and run this from nothing** | **[action_string.md](action_string.md)** |
+| How the pieces fit together | [Plan_X/ARCHITECTURE.md](Plan_X/ARCHITECTURE.md), with [the diagram](graphs/21_architecture.svg) |
+| The RL designs, results and what went wrong | [rl/ANALYSIS.md](rl/ANALYSIS.md) |
+| The formal problem: states, actions, reward, bandit framing, power analysis | [MATH.md](MATH.md) |
+| Every experiment in order, including the failures | [Plan_X/RESULTS.md](Plan_X/RESULTS.md) |
+| Papers, models and libraries used, with links | [Plan_X/SOURCES.md](Plan_X/SOURCES.md) |
+| What each figure shows | [graphs/INDEX.md](graphs/INDEX.md) |
 
 ---
 
 ## Setup
+
+**[action_string.md](action_string.md) is the full step by step**: what to
+install, where every model file has to land, what each `.env` variable means,
+and the command for each job. Follow that on a new machine. What follows here
+is the short version for someone who already has the models.
 
 ### 1. Configure paths (`.env`)
 
@@ -185,6 +194,9 @@ across two run directories (`designB_B3h` holds iterations 0 to 80 and
 | File | Env | What it does |
 |---|---|---|
 | `ahjn.py` | voiceclone | The command line. Every verb above. |
+| `explore.py` | voiceclone | One page listing every training run and every generated clip: how far each run got, how long it took, its reward trend, and each clip's scores with the audio playable beside them. Standard library only. `python explore.py` |
+| `apply_best.py` | voiceclone | Speak a line using the best configuration the project found, which is the distilled white-box operator rather than either RL design. |
+| `scripts/` | voiceclone | One script per job, thin wrappers over the modules: `train_design_a.py`, `train_design_b.py`, `generate_audio.py`, `compare_models.py`, `make_graphs.py`. Documented in [action_string.md](action_string.md). |
 | `env_config.py` | either | Loads `.env` and exposes every path as one import. |
 | `cloners.py` | voiceclone | Zero-shot cloning: `enroll`, `generate`. CosyVoice2 only. |
 | `detectors.py` | either | The four anti-spoofing models; `P(human)` per model. `--check` verifies the weights. |
