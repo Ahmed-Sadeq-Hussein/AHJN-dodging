@@ -55,6 +55,14 @@ def point(path):
 
 def main() -> int:
     PLAN_X.mkdir(exist_ok=True)
+
+    # same reason as plot_plan_x: with no evaluation files this drew an empty
+    # frontier over the committed one
+    if not any(RL.glob(pattern) for pattern, *_ in FAMILIES):
+        print(f"no evaluation files under {RL}. Nothing written, so the "
+              f"committed figure survives.")
+        return 1
+
     fig, ax = plt.subplots(figsize=(11.5, 6.5))
     seen, base_sm = set(), None
 

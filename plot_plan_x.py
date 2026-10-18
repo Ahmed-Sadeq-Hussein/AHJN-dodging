@@ -258,6 +258,17 @@ def main() -> int:
     a, b = load(args.a_run), load(args.b_run)
     print(f"Design A: {len(a)} iterations   Design B: {len(b)} iterations")
 
+    # Refuse rather than draw blanks. With no run data these figures still
+    # rendered, exited 0, and overwrote the committed versions with empty
+    # axes, so a fresh clone destroyed figures 1, 1b and 3 by running the
+    # graph script. An empty figure is worse than no figure.
+    if not a and not b:
+        print(f"\nno training rows under {RL_RUNS}.")
+        print("Nothing was written: these figures would be empty and would "
+              "overwrite the committed\nones. Train a run, or point "
+              "RESULTS_ROOT at the tree that holds them.")
+        return 1
+
     fig1_learning(a, b, out / "1_learning_curves.png"); print("  1_learning_curves.png")
     if fig1b_softmin(a, b, out / "1b_softmin_comparable.png"): print("  1b_softmin_comparable.png")
     if fig2_per_detector(b, out / "2_per_detector.png"): print("  2_per_detector.png")
