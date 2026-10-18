@@ -58,7 +58,9 @@ def main() -> int:
 
     # same reason as plot_plan_x: with no evaluation files this drew an empty
     # frontier over the committed one
-    if not any(RL.glob(pattern) for pattern, *_ in FAMILIES):
+    # glob() returns a generator, which is truthy even when it yields
+    # nothing, so this has to consume it
+    if not any(True for pattern, *_ in FAMILIES for _ in RL.glob(pattern)):
         print(f"no evaluation files under {RL}. Nothing written, so the "
               f"committed figure survives.")
         return 1
