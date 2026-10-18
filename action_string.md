@@ -318,7 +318,7 @@ Two designs, one script each.
 
 **Design A, PPO with Lagrangian constraints.** One utterance is one episode:
 observe the mel, apply a single bounded edit, receive one terminal reward.
-Roughly 4 GPU hours to 400 iterations.
+Measured at 6.2 GPU hours to 400 iterations.
 
 ```bash
 python scripts/train_design_a.py --dry-run                  # show settings, train nothing
@@ -329,8 +329,8 @@ python scripts/train_design_a.py --run <NEW_RUN_ID> --lr <LR> --voices <V1> <V2>
 
 **Design B, SAC with a detector gradient hint.** Same one-step formulation,
 but off-policy, with twin Q critics, an automatically tuned temperature, and
-the detector gradient fed to the actor as extra input channels. Roughly 9 GPU
-hours to 400 iterations.
+the detector gradient fed to the actor as extra input channels. Measured at
+12.0 GPU hours to 400 iterations, split across two run directories.
 
 ```bash
 python scripts/train_design_b.py --dry-run

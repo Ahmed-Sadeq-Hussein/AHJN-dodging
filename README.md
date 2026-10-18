@@ -172,8 +172,10 @@ Runs every `plot_*.py` against the stored results, writing to `graphs/`:
 separately. Nothing is regenerated from a model, so this is fast and
 deterministic.
 
-Full retraining is not fast: Design A and Design B are roughly 4 and 9 GPU
-hours to 400 iterations. The checkpoints and logs under
+Full retraining is not fast. Measured from the training logs themselves,
+Design A took 6.2 GPU hours to 400 iterations and Design B took 12.0, split
+across two run directories (`designB_B3h` holds iterations 0 to 80 and
+`designB_B9h` the rest). The checkpoints and logs under
 `RESULTS_ROOT\rl_runs\` are what the analysis reads.
 
 ---
